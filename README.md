@@ -4,7 +4,7 @@
 [![conda-forge](https://img.shields.io/conda/vn/conda-forge/diffly?logoColor=white&logo=conda-forge&style=flat-square)](https://prefix.dev/channels/conda-forge/packages/diffly)
 [![pypi-version](https://img.shields.io/pypi/v/diffly.svg?logo=pypi&logoColor=white&style=flat-square)](https://pypi.org/project/diffly)
 [![python-version](https://img.shields.io/pypi/pyversions/diffly?logoColor=white&logo=python&style=flat-square)](https://pypi.org/project/diffly)
-[![codecov](https://codecov.io/gh/Quantco/diffly/graph/badge.svg?token=uhk6X2XBFG)](https://codecov.io/gh/Quantco/diffly)
+[![codecov](https://codecov.io/gh/Quantco/diffly/graph/badge.svg?token=N9Xwzu2Jdj)](https://codecov.io/gh/Quantco/diffly)
 
 Utility package for comparing polars dataframes.
 
