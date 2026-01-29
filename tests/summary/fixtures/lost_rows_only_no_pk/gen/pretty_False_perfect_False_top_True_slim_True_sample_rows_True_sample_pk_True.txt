@@ -1,0 +1,7 @@
+   Attention: the data frames do not match exactly, but as no primary key columns are
+   provided, the row and column matches cannot be computed.
+
+ Rows
+ ▔▔▔▔
+   Left count           Right count
+       6      (-33.33%)      4

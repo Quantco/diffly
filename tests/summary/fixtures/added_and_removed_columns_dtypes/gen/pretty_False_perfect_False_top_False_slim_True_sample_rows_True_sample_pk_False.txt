@@ -1,0 +1,16 @@
+   Attention: the data frames do not match exactly, but as no primary key columns are
+   provided, the row and column matches cannot be computed.
+
+ Schemas
+ ▔▔▔▔▔▔▔
+   ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┓
+   ┃ Left only  ┃         In common         ┃ Right only ┃
+   ┃ 2 columns  ┃         3 columns         ┃  1 column  ┃
+   ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━┩
+   │   col_a    │  col_x [Int16 -> UInt16]  │   col_d    │
+   ├────────────┼───────────────────────────┼────────────┤
+   │   col_b    │  col_y [Int8 -> Float32]  │            │
+   ├────────────┼───────────────────────────┼────────────┤
+   │            │ (+1 column with matching  │            │
+   │            │        data type)         │            │
+   └────────────┴───────────────────────────┴────────────┘

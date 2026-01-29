@@ -1,0 +1,83 @@
+[workspace]
+name = "diffly"
+description = "Utility package for comparing polars dataframes."
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "osx-64", "linux-64", "linux-aarch64", "win-64"]
+
+[tasks]
+postinstall = "pip install --no-build-isolation --no-deps --disable-pip-version-check -e ."
+
+[dependencies]
+polars = ">=1.32,<2" # is_close() only exists since 1.32
+python = ">=3.11"
+rich = "*"
+pip = "*"
+hatchling = "*"
+hatch-vcs = "*"
+
+[feature.docs.dependencies]
+numpydoc = "*"
+sphinx = "*"
+sphinx_rtd_theme = "*"
+sphinxcontrib-apidoc = "*"
+[feature.docs.tasks]
+docs = { cmd = "rm -rf _build && find . -name _gen -type d -exec rm -rf \"{}\" + && sphinx-build -M html . _build --fail-on-warning", cwd = "docs", depends-on = "postinstall" }
+readthedocs = { cmd = "rm -rf $READTHEDOCS_OUTPUT/html && cp -r docs/_build/html $READTHEDOCS_OUTPUT/html", depends-on = "docs" }
+
+[feature.dev.dependencies]
+jupyter = "*"
+
+[feature.test.dependencies]
+mypy = "*"
+pytest = ">=6"
+pytest-cov = "*"
+pytest-lazy-fixtures = "*"
+[feature.test.tasks]
+test = "python -m pytest"
+test-coverage = "python -m pytest --cov=diffly --cov-report=xml --cov-report=term-missing"
+
+[feature.build.dependencies]
+python-build = "*"
+twine = "*"
+wheel = "*"
+[feature.build.tasks]
+build-wheel = "python -m build --no-isolation ."
+check-wheel = "twine check dist/*"
+
+[feature.lint.dependencies]
+docformatter = "*"
+insert-license-header = "*"
+pre-commit = "*"
+pre-commit-hooks = "*"
+prettier = "*"
+ruff = "*"
+taplo = "*"
+typos = "*"
+zizmor = "*"
+[feature.lint.tasks]
+pre-commit-install = "pre-commit install"
+pre-commit-run = "pre-commit run -a"
+
+[feature.py311.dependencies]
+python = "3.11.*"
+[feature.py312.dependencies]
+python = "3.12.*"
+[feature.py313.dependencies]
+python = "3.13.*"
+[feature.py314.dependencies]
+python = "3.14.*"
+
+[feature.optional.dependencies]
+dataframely = ">=2,<3"
+typer = ">=0.21,<1"
+
+[environments]
+default = ["optional", "dev", "test"]
+docs = ["docs"]
+lint = { features = ["lint"], no-default-feature = true }
+build = ["build"]
+no-optional-dependencies = ["py314", "test"]
+py311 = ["optional", "py311", "test"]
+py312 = ["optional", "py312", "test"]
+py313 = ["optional", "py313", "test"]
+py314 = ["optional", "py314", "test"]

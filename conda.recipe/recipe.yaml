@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/prefix-dev/recipe-format/main/schema.json
+
+context:
+  name: diffly
+  # replaced in CI
+  version: '0.0.0'
+
+package:
+  name: ${{ name | lower }}
+  version: ${{ version }}
+
+source:
+  path: ../
+
+build:
+  number: 0
+  noarch: python
+  python:
+    entry_points:
+      - diffly=diffly.cli:app
+  script:
+    - python -m pip install . --no-deps --ignore-installed -vv --no-build-isolation --disable-pip-version-check
+
+requirements:
+  host:
+    - python >=3.11
+    - pip
+    - hatchling
+  run:
+    - polars >=1.32,<2  # is_close() only exists since 1.32
+    - python >=3.11
+    - rich
+  run_constraints:
+    - dataframely >=2,<3
+    - typer >=0.21,<1
+
+tests:
+  - script:
+    - diffly --help
+    requirements:
+      run:
+        - typer >=0.21,<1
+  - python:
+      imports:
+        - diffly
+      pip_check: true
+  - package_contents:
+      site_packages:
+        - ${{ name | replace('-', '_') | replace('.', '_') }}-${{ version }}.dist-info/*
+
+about:
+  homepage: https://github.com/quantco/diffly
+  license: LicenseRef-QuantCo
+  summary: "Utility package for comparing polars dataframes."

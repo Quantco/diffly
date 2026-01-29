@@ -1,0 +1,14 @@
+   [3mAttention: the data frames do not match exactly, but as no primary key columns are [0m
+   [3mprovided, the row and column matches cannot be computed.[0m
+
+ [1mSchemas[0m
+ ▔▔▔▔▔▔▔
+   ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+   ┃[1m [0m[1m        In common        [0m[1m [0m┃
+   ┃[1m [0m[1m        3 columns        [0m[1m [0m┃
+   ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+   │   [36mcol_y[0m [Int8 -> Int32]   │
+   ├───────────────────────────┤
+   │ (+2 columns with matching │
+   │        data types)        │
+   └───────────────────────────┘

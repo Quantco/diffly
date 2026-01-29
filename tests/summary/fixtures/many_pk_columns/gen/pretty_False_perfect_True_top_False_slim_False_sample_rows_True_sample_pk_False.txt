@@ -1,0 +1,95 @@
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                                     Diffly Summary                                     ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+   Primary key: name_0, name_1, name_2, name_3, name_4, name_5, name_6, name_7, name_8,
+   name_9, name_10, name_11, name_12, name_13, name_14, name_15, name_16, name_17,
+   name_18, name_19
+
+ Schemas
+ ▔▔▔▔▔▔▔
+   Schemas match exactly (column count: 80).
+
+ Rows
+ ▔▔▔▔
+   Left count           Right count
+       6      (-33.33%)      4
+
+   ┏━┯━┯━┯━┯━┓
+   ┃-│-│-│-│-┃                2  left only   (33.33%)
+   ┠─┼─┼─┼─┼─┨╌╌╌┏━┯━┯━┯━┯━┓╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╮
+   ┃ │ │ │ │ ┃ = ┃ │ │ │ │ ┃  4  equal      (100.00%)  │
+   ┗━┷━┷━┷━┷━┛╌╌╌┗━┷━┷━┷━┷━┛╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯
+
+ Columns
+ ▔▔▔▔▔▔▔
+   ┌────────────────────┬─────────┐
+   │ life_expectancy_0  │ 100.00% │
+   │ life_expectancy_1  │ 100.00% │
+   │ life_expectancy_10 │ 100.00% │
+   │ life_expectancy_11 │ 100.00% │
+   │ life_expectancy_12 │ 100.00% │
+   │ life_expectancy_13 │ 100.00% │
+   │ life_expectancy_14 │ 100.00% │
+   │ life_expectancy_15 │ 100.00% │
+   │ life_expectancy_16 │ 100.00% │
+   │ life_expectancy_17 │ 100.00% │
+   │ life_expectancy_18 │ 100.00% │
+   │ life_expectancy_19 │ 100.00% │
+   │ life_expectancy_2  │ 100.00% │
+   │ life_expectancy_3  │ 100.00% │
+   │ life_expectancy_4  │ 100.00% │
+   │ life_expectancy_5  │ 100.00% │
+   │ life_expectancy_6  │ 100.00% │
+   │ life_expectancy_7  │ 100.00% │
+   │ life_expectancy_8  │ 100.00% │
+   │ life_expectancy_9  │ 100.00% │
+   │ speed_kph_0        │ 100.00% │
+   │ speed_kph_1        │ 100.00% │
+   │ speed_kph_10       │ 100.00% │
+   │ speed_kph_11       │ 100.00% │
+   │ speed_kph_12       │ 100.00% │
+   │ speed_kph_13       │ 100.00% │
+   │ speed_kph_14       │ 100.00% │
+   │ speed_kph_15       │ 100.00% │
+   │ speed_kph_16       │ 100.00% │
+   │ speed_kph_17       │ 100.00% │
+   │ speed_kph_18       │ 100.00% │
+   │ speed_kph_19       │ 100.00% │
+   │ speed_kph_2        │ 100.00% │
+   │ speed_kph_3        │ 100.00% │
+   │ speed_kph_4        │ 100.00% │
+   │ speed_kph_5        │ 100.00% │
+   │ speed_kph_6        │ 100.00% │
+   │ speed_kph_7        │ 100.00% │
+   │ speed_kph_8        │ 100.00% │
+   │ speed_kph_9        │ 100.00% │
+   │ weight_kg_0        │ 100.00% │
+   │ weight_kg_1        │ 100.00% │
+   │ weight_kg_10       │ 100.00% │
+   │ weight_kg_11       │ 100.00% │
+   │ weight_kg_12       │ 100.00% │
+   │ weight_kg_13       │ 100.00% │
+   │ weight_kg_14       │ 100.00% │
+   │ weight_kg_15       │ 100.00% │
+   │ weight_kg_16       │ 100.00% │
+   │ weight_kg_17       │ 100.00% │
+   │ weight_kg_18       │ 100.00% │
+   │ weight_kg_19       │ 100.00% │
+   │ weight_kg_2        │ 100.00% │
+   │ weight_kg_3        │ 100.00% │
+   │ weight_kg_4        │ 100.00% │
+   │ weight_kg_5        │ 100.00% │
+   │ weight_kg_6        │ 100.00% │
+   │ weight_kg_7        │ 100.00% │
+   │ weight_kg_8        │ 100.00% │
+   │ weight_kg_9        │ 100.00% │
+   └────────────────────┴─────────┘
+
+ Rows left only
+ ▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+   ┏━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━┓
+   ┃ name_0        ┃ name_1       ┃ name_2        ┃ name_3       ┃ name_4        ┃ ... ┃
+   ┡━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━┩
+   │ dolphindolph… │ dolphindolp… │ dolphindolph… │ dolphindolp… │ dolphindolph… │ ... │
+   │ parrot        │ parrot       │ parrot        │ parrot       │ parrot        │ ... │
+   └───────────────┴──────────────┴───────────────┴──────────────┴───────────────┴─────┘

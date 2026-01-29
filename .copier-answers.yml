@@ -1,0 +1,12 @@
+# This file is managed by Copier; DO NOT EDIT OR REMOVE.
+_commit: v0.4.1-60-g881f631
+_src_path: ../copier-template-python-open-source
+add_autobump_workflow: false
+author_email: ege.karaismailoglu@quantco.com
+author_name: Ege Karaismailoglu
+github_url: https://github.com/Quantco/diffly
+github_user: EgeKaraismailogluQC
+minimal_python_version: py311
+project_short_description: Utility package for comparing polars dataframes.
+project_slug: diffly
+use_devcontainer: false

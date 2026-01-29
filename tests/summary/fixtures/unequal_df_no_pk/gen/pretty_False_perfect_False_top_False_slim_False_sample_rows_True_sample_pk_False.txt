@@ -1,0 +1,13 @@
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                                     Diffly Summary                                     ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+   Attention: the data frames do not match exactly, but as no primary key columns are
+   provided, the row and column matches cannot be computed.
+
+ Schemas
+ ▔▔▔▔▔▔▔
+   Schemas match exactly (column count: 4).
+
+ Rows
+ ▔▔▔▔
+   The number of rows matches exactly (row count: 6).

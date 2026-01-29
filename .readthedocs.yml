@@ -1,0 +1,12 @@
+version: 2
+build:
+  os: ubuntu-20.04
+  tools:
+    python: mambaforge-latest
+  commands:
+    - mamba install -c conda-forge -c nodefaults pixi
+    - pixi run -e docs readthedocs
+sphinx:
+  configuration: docs/conf.py
+formats:
+  - pdf
