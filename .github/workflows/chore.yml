@@ -1,3 +1,5 @@
+# zizmor: ignore=pull_request_target
+# Reason: Workflow only checks metadata and does not check out or execute PR code.
 name: Chore
 on:
   pull_request_target:
