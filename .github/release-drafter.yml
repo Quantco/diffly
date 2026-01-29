@@ -40,9 +40,12 @@ autolabeler:
       - '/^[a-z]+(\(.*\))?\!\:/'
 # ------------------------------------- AUTOMATIC VERSIONING ------------------------------------ #
 version-resolver:
-  minor:
+  major:
     labels:
       - breaking
+  minor:
+    labels:
+      - enhancement
   default: patch
 # ------------------------------------ RELEASE CONFIGURATION ------------------------------------ #
 name-template: "v$RESOLVED_VERSION"
