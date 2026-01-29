@@ -1,8 +1,6 @@
-# zizmor: ignore=pull_request_target
-# Reason: Workflow only checks metadata and does not check out or execute PR code.
 name: Chore
 on:
-  pull_request_target:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] no PR code executed
     branches: [main]
     types: [opened, reopened, edited, synchronize]
   push:
