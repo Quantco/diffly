@@ -40,6 +40,8 @@ extensions = [
     "numpydoc",
     "sphinx.ext.linkcode",
     "sphinxcontrib.apidoc",
+    "myst_parser",
+    "sphinx_copybutton",
 ]
 
 apidoc_module_dir = "../diffly"
@@ -49,8 +51,28 @@ apidoc_extra_args = ["--implicit-namespaces"]
 
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
-html_theme = "sphinx_rtd_theme"
+html_theme = "pydata_sphinx_theme"
+pygments_style = "lovelace"
+html_theme_options = {
+    "external_links": [],
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/Quantco/diffly",
+            "icon": "fa-brands fa-github",
+        },
+    ],
+}
+html_title = "Diffly"
 html_static_path = ["_static"]
+
+# object signatures
+maximum_signature_line_length = 88
+
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
 
 
 # Copied and adapted from

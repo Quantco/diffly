@@ -16,9 +16,11 @@ hatchling = "*"
 hatch-vcs = "*"
 
 [feature.docs.dependencies]
+myst-parser = "*"
 numpydoc = "*"
+pydata-sphinx-theme = "*"
 sphinx = "*"
-sphinx_rtd_theme = "*"
+sphinx-copybutton = "*"
 sphinxcontrib-apidoc = "*"
 [feature.docs.tasks]
 docs = { cmd = "rm -rf _build && find . -name _gen -type d -exec rm -rf \"{}\" + && sphinx-build -M html . _build --fail-on-warning", cwd = "docs", depends-on = "postinstall" }
