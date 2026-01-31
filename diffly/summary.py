@@ -106,6 +106,7 @@ class Summary:
             pretty: Whether to color the summary for the currently terminal window.
                 If set to `None`, will infer from the context.
         """
+        # REVIEW: I had to set force_jupyter=False here to avoid multiple output cells
         if pretty or pretty is None:
             console = Console(force_terminal=pretty, force_jupyter=False, width=WIDTH)
             with console.capture() as capture:
