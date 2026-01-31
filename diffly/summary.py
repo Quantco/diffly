@@ -107,13 +107,13 @@ class Summary:
                 If set to `None`, will infer from the context.
         """
         if pretty or pretty is None:
-            console = Console(force_terminal=pretty, width=WIDTH)
+            console = Console(force_terminal=pretty, force_jupyter=False, width=WIDTH)
             with console.capture() as capture:
                 self._print_to_console(console)
             summary = capture.get()
 
         else:
-            console = Console(file=io.StringIO(), width=WIDTH)
+            console = Console(file=io.StringIO(), force_jupyter=False, width=WIDTH)
             self._print_to_console(console)
             summary = cast(io.StringIO, console.file).getvalue()
 

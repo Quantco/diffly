@@ -16,7 +16,9 @@ hatchling = "*"
 hatch-vcs = "*"
 
 [feature.docs.dependencies]
-myst-parser = "*"
+myst-nb = "*"
+#myst-parser = "*"
+#nbsphinx = "*"
 numpydoc = "*"
 pydata-sphinx-theme = "*"
 sphinx = "*"

@@ -37,10 +37,10 @@ copyright = f"{datetime.date.today().year}, QuantCo, Inc"
 author = "QuantCo, Inc."
 
 extensions = [
+    "myst_nb",
     "numpydoc",
     "sphinx.ext.linkcode",
     "sphinxcontrib.apidoc",
-    "myst_parser",
     "sphinx_copybutton",
 ]
 
@@ -68,11 +68,6 @@ html_static_path = ["_static"]
 
 # object signatures
 maximum_signature_line_length = 88
-
-source_suffix = {
-    ".rst": "restructuredtext",
-    ".md": "markdown",
-}
 
 
 # Copied and adapted from
