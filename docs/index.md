@@ -64,7 +64,7 @@ if not comparison.equal():
 
 ## Next Steps
 
-- Follow the [Quickstart Guide](guides/quickstart.md) for a comprehensive introduction
+- Follow the [Quickstart Guide](guides/quickstart.ipynb) for a comprehensive introduction
 - Explore [Examples](guides/examples/index.md) for common use cases
 - Learn about advanced [Features](guides/features/index.md) like tolerances and custom summaries
 - Check the [API Reference](api/modules.rst) for detailed function documentation
