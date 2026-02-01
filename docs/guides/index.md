@@ -5,9 +5,10 @@
 :hidden:
 
 quickstart
-examples/index
 features/index
+examples/index
 faq
+development
 ```
 
 ## Installation

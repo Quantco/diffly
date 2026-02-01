@@ -65,6 +65,7 @@ html_theme_options = {
 }
 html_title = "Diffly"
 html_static_path = ["_static"]
+html_show_sourcelink = False
 
 # object signatures
 maximum_signature_line_length = 88

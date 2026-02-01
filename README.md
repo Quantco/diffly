@@ -1,4 +1,11 @@
-# diffly
+<!-- LOGO -->
+<br />
+
+<div align="center">
+
+  <h3 align="center">
+  <code>diffly</code> — A utility package for comparing 🐻‍❄️ DataFrames
+  </h3>
 
 [![CI](https://img.shields.io/github/actions/workflow/status/Quantco/diffly/ci.yml?style=flat-square&branch=main)](https://github.com/Quantco/diffly/actions/workflows/ci.yml)
 [![conda-forge](https://img.shields.io/conda/vn/conda-forge/diffly?logoColor=white&logo=conda-forge&style=flat-square)](https://prefix.dev/channels/conda-forge/packages/diffly)
@@ -6,38 +13,47 @@
 [![python-version](https://img.shields.io/pypi/pyversions/diffly?logoColor=white&logo=python&style=flat-square)](https://pypi.org/project/diffly)
 [![codecov](https://codecov.io/gh/Quantco/diffly/graph/badge.svg?token=N9Xwzu2Jdj)](https://codecov.io/gh/Quantco/diffly)
 
-Utility package for comparing polars dataframes.
+</div>
 
-## Installation
+## 🗂 Table of Contents
 
-This project is managed by [pixi](https://pixi.sh).
-You can install the package in development mode using:
+- [Introduction](#-introduction)
+- [Installation](#-installation)
+- [Usage](#-usage)
 
-```bash
-git clone https://github.com/Quantco/diffly
-cd diffly
+## 📖 Introduction
 
-pixi run pre-commit-install
-pixi run postinstall
-pixi run test
-```
+Diffly is a Python package for comparing [Polars](https://pola.rs/) DataFrames with detailed analysis capabilities. It identifies differences between datasets including schema differences, row-level mismatches, missing rows, and column value changes.
 
-## Testing
+## 💿 Installation
 
-Our test setup consists of two components:
-
-### Unit tests
-
-We use unit tests to test the individual methods within our codebase. To run the unit tests, you can execute:
+You can install `diffly` using your favorite package manager, e.g., `pixi` or `pip`:
 
 ```bash
-pixi run test
+pixi add diffly
+pip install diffly
 ```
 
-### Generated summary fixtures
+## 🎯 Usage
 
-To track changes to the comparison summary, we maintain a set of _summary fixtures_. If a code change results in a change to the summary, this should be reflected in at least one of the summary fixtures. Summary fixtures are automatically generated when running pre-commit hooks. To generate summary fixtures manually, you can execute:
+```python
+import polars as pl
+from diffly import compare_frames
 
-```bash
-pixi run pytest -m generate
+left = pl.DataFrame({
+    "id": ["a", "b", "c"],
+    "value": [1.0, 2.0, 3.0],
+})
+
+right = pl.DataFrame({
+    "id": ["a", "b", "d"],
+    "value": [1.0, 2.5, 4.0],
+})
+
+comparison = compare_frames(left, right, primary_key="id")
+
+if not comparison.equal():
+    print(comparison.summary())
 ```
+
+See more examples in the [documentation](https://diffly.readthedocs.io/stable/).
