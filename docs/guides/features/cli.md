@@ -2,6 +2,10 @@
 
 `diffly` includes a built-in CLI for comparing parquet files directly from the terminal.
 
+```{note}
+The CLI requires [typer](https://typer.tiangolo.com/) to be installed. You can install it with `pip install typer` or `pixi add typer`.
+```
+
 ## Basic usage
 
 ```bash
