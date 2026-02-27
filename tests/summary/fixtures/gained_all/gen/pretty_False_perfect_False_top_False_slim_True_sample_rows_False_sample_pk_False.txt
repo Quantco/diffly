@@ -1,0 +1,8 @@
+ Rows
+ ▔▔▔▔
+   Left count  Right count
+       0            6
+
+      ┏━┯━┯━┯━┯━┓
+      ┃+│+│+│+│+┃  6  right only  (100.00%)
+      ┗━┷━┷━┷━┷━┛

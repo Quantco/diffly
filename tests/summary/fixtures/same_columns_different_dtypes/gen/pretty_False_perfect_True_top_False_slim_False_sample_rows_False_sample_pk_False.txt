@@ -1,0 +1,21 @@
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                                     Diffly Summary                                     ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+   Attention: the data frames do not match exactly, but as no primary key columns are
+   provided, the row and column matches cannot be computed.
+
+ Schemas
+ ▔▔▔▔▔▔▔
+   ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+   ┃         In common         ┃
+   ┃         3 columns         ┃
+   ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+   │   col_y [Int8 -> Int32]   │
+   ├───────────────────────────┤
+   │ (+2 columns with matching │
+   │        data types)        │
+   └───────────────────────────┘
+
+ Rows
+ ▔▔▔▔
+   The number of rows matches exactly (row count: 0).

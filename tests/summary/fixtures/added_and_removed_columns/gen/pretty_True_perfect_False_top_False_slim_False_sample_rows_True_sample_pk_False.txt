@@ -1,0 +1,19 @@
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ [1m                                    Diffly Summary                                    [0m ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+   [3mAttention: the data frames do not match exactly, but as no primary key columns are [0m
+   [3mprovided, the row and column matches cannot be computed.[0m
+
+ [1mSchemas[0m
+ ▔▔▔▔▔▔▔
+   ┏━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━┓
+   ┃[1;31m [0m[1;31mLeft only [0m[1;31m [0m┃[1m [0m[1mIn common [0m[1m [0m┃[1;32m [0m[1;32mRight only[0m[1;32m [0m┃
+   ┃[1;31m [0m[1;31m2 columns [0m[1;31m [0m┃[1m [0m[1m 1 column [0m[1m [0m┃[1;32m [0m[1;32m 1 column [0m[1;32m [0m┃
+   ┡━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━┩
+   │   [36mcol_a[0m    │    ...     │   [36mcol_d[0m    │
+   │   [36mcol_b[0m    │            │            │
+   └────────────┴────────────┴────────────┘
+
+ [1mRows[0m
+ ▔▔▔▔
+   [3mThe number of rows matches exactly (row count: 0).[0m

@@ -1,0 +1,98 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "diffly"
+description = "Utility package for comparing polars dataframes."
+authors = [
+  { name = "Ege Karaismailoğlu", email = "ege.karaismailoglu@quantco.com" },
+  { name = "Marius Merkle", email = "marius.merkle@quantco.com" },
+  { name = "Oliver Borchert", email = "oliver.borchert@quantco.com" },
+]
+dynamic = ["version"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
+requires-python = ">=3.11"
+readme = "README.md"
+dependencies = [
+  "polars>=1.32,<2", # is_close() only exists since 1.32
+  "rich",
+]
+
+[project.urls]
+repository = "https://github.com/Quantco/diffly"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["diffly"]
+
+[project.scripts]
+diffly = "diffly.cli:app"
+
+[project.optional-dependencies]
+dataframely = ["dataframely>=2,<3"]
+typer = ["typer>=0.21,<1"]
+
+[tool.docformatter]
+black = true # only sets the style options to the default values of black
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+ignore = [
+  "E501", # https://docs.astral.sh/ruff/faq/#is-the-ruff-linter-compatible-with-black
+  "N803", # https://docs.astral.sh/ruff/rules/invalid-argument-name
+  "N806", # https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function
+]
+select = [
+  # pyflakes
+  "F",
+  # pycodestyle
+  "E",
+  "W",
+  # isort
+  "I",
+  # pep8-naming
+  "N",
+  # pyupgrade
+  "UP",
+]
+
+[tool.ruff.format]
+indent-style = "space"
+quote-style = "double"
+
+[tool.mypy]
+check_untyped_defs = true
+disallow_untyped_defs = true
+exclude = ["docs/"]
+no_implicit_optional = true
+python_version = '3.11'
+
+[tool.typos.files]
+extend-exclude = [".github/CODEOWNERS"]
+
+[tool.typos]
+# Taken from:
+# https://github.com/crate-ci/typos/blob/master/docs/reference.md#example-configurations
+default.extend-ignore-re = [
+  # Disable spell-checking for an individual line.
+  "(?Rm)^.*(#|//)\\s*spellchecker:disable-line$",
+  # Disable spell-checking for a code block.
+  "(?s)(#|//)\\s*spellchecker:off.*?\\n\\s*(#|//)\\s*spellchecker:on",
+]
+
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib -m 'not generate'"
+markers = ["generate: mark a test function as generating fixture output."]
+testpaths = ["tests"]
