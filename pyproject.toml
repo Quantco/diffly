@@ -79,7 +79,7 @@ no_implicit_optional = true
 python_version = '3.11'
 
 [tool.typos.files]
-extend-exclude = [".github/CODEOWNERS"]
+extend-exclude = [".github/CODEOWNERS", "tests/summary/fixtures/**/gen/*.txt"]
 
 [tool.typos]
 # Taken from:
