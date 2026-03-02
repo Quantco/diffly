@@ -1,5 +1,0 @@
-[files]
-extend-exclude = ["tests/summary/fixtures/**/gen/*.txt"]
-
-[default]
-extend-ignore-identifiers-re = ["EgeK.*"]
