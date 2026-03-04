@@ -27,10 +27,12 @@ Diffly is a Python package for comparing [Polars](https://pola.rs/) DataFrames w
 
 ## 💿 Installation
 
-You can install `diffly` using your favorite package manager, e.g., `pixi` or `pip`:
+You can install `diffly` using your favorite package manager:
 
 ```bash
 pixi add diffly
+conda install diffly
+uv add diffly
 pip install diffly
 ```
 
