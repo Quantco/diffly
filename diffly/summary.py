@@ -563,11 +563,12 @@ class Summary:
                 "Column", max_width=COLUMN_SECTION_COLUMN_WIDTH, overflow=OVERFLOW
             )
             matches.add_column("Match Rate", justify="right")
-            if any(
+            has_top_changes_column = any(
                 self.top_k_changes_by_column[col_name] > 0
                 for col_name in self._comparison._other_common_columns
                 if self._comparison.fraction_same()[col_name] < 1
-            ):
+            )
+            if has_top_changes_column:
                 matches.add_column("Top Changes", justify="right")
             if self.show_perfect_column_matches:
                 max_col_len = max(
@@ -635,7 +636,7 @@ class Summary:
 
                     matches.add_row(*columns)
                     if (
-                        top_k_column_changes > 0
+                        has_top_changes_column
                         or max_col_len > COLUMN_SECTION_COLUMN_WIDTH
                     ):
                         matches.add_section()
