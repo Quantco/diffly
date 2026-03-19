@@ -32,6 +32,7 @@ def test_condition_equal_columns_struct() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
+                max_list_length=0,
                 abs_tol=0.5,
                 rel_tol=0,
             )
@@ -66,6 +67,7 @@ def test_condition_equal_columns_different_struct_fields() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
+                max_list_length=0,
             )
         )
         .to_series()
@@ -188,6 +190,7 @@ def test_condition_equal_columns_nested_dtype_mismatch() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
+                max_list_length=0,
             )
         )
         .to_series()
@@ -220,6 +223,7 @@ def test_condition_equal_columns_exactly_one_nested() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
+                max_list_length=0,
             )
         )
         .to_series()
@@ -262,6 +266,7 @@ def test_condition_equal_columns_temporal_tolerance() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
+                max_list_length=0,
                 abs_tol_temporal=dt.timedelta(seconds=2),
             )
         )
@@ -354,6 +359,7 @@ def test_condition_equal_columns_array_vs_list_length_mismatch() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
+                max_list_length=0,
                 abs_tol=0.5,
                 rel_tol=0,
             )

@@ -508,10 +508,10 @@ class DataFrameComparison:
                     columns=common_columns,
                     schema_left=self.left_schema,
                     schema_right=self.right_schema,
+                    max_list_lengths_by_column=self._max_list_lengths,
                     abs_tol_by_column=self.abs_tol_by_column,
                     rel_tol_by_column=self.rel_tol_by_column,
                     abs_tol_temporal_by_column=self.abs_tol_temporal_by_column,
-                    max_list_lengths_by_column=self._max_list_lengths,
                 ).all()
             )
             .item()
@@ -734,10 +734,10 @@ class DataFrameComparison:
             columns=columns,
             schema_left=self.left_schema,
             schema_right=self.right_schema,
+            max_list_lengths_by_column=self._max_list_lengths,
             abs_tol_by_column=self.abs_tol_by_column,
             rel_tol_by_column=self.rel_tol_by_column,
             abs_tol_temporal_by_column=self.abs_tol_temporal_by_column,
-            max_list_lengths_by_column=self._max_list_lengths,
         )
 
     def _condition_equal_columns(self, column: str) -> pl.Expr:
