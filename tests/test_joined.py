@@ -5,7 +5,7 @@ import polars as pl
 import pytest
 from polars.testing import assert_frame_equal
 
-from diffly import compare_frames
+from diffly import PrimaryKeyError, compare_frames
 
 
 def test_joined() -> None:
@@ -31,7 +31,7 @@ def test_joined_missing_primary_key() -> None:
     left = pl.DataFrame({"id": ["a", "b"], "value": [1, 2]})
     right = pl.DataFrame({"id": ["a"], "value": [1]})
     comparison = compare_frames(left, right)
-    with pytest.raises(ValueError):
+    with pytest.raises(PrimaryKeyError):
         _ = comparison.joined()
 
 

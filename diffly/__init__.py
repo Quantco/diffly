@@ -11,6 +11,7 @@ except importlib.metadata.PackageNotFoundError as e:  # pragma: no cover
     __version__ = "unknown"
 
 
+from ._exceptions import PrimaryKeyError
 from .comparison import compare_frames
 
-__all__ = ["compare_frames"]
+__all__ = ["PrimaryKeyError", "compare_frames"]

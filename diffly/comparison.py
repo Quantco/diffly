@@ -14,6 +14,7 @@ from polars.schema import Schema as PolarsSchema
 
 from ._cache import cached_method
 from ._conditions import condition_equal_columns, condition_equal_rows
+from ._exceptions import PrimaryKeyError
 from ._utils import (
     ABS_TOL_DEFAULT,
     ABS_TOL_TEMPORAL_DEFAULT,
@@ -131,23 +132,25 @@ class DataFrameComparison:
         )
         if primary_key is not None:
             if len(primary_key) == 0:
-                raise ValueError("The primary key columns must not be an empty list.")
+                raise PrimaryKeyError(
+                    "The primary key columns must not be an empty list."
+                )
             if missing := (set(primary_key) - set(left_schema.names())):
                 raise ValueError(
                     f"The primary key columns must be present in the left data frame, "
-                    f"but the following are missing: {', '.join(missing)}."
+                    f"but the following are missing: {', '.join(sorted(missing))}."
                 )
             if missing := (set(primary_key) - set(right_schema.names())):
                 raise ValueError(
                     f"The primary key columns must be present in the right data frame, "
-                    f"but the following are missing: {', '.join(missing)}."
+                    f"but the following are missing: {', '.join(sorted(missing))}."
                 )
             if not is_primary_key(left, primary_key):
-                raise ValueError(
+                raise PrimaryKeyError(
                     "The columns are not a primary key for the left data frame."
                 )
             if not is_primary_key(right, primary_key):
-                raise ValueError(
+                raise PrimaryKeyError(
                     "The columns are not a primary key for the right data frame."
                 )
 
@@ -693,7 +696,7 @@ class DataFrameComparison:
 
     def _check_primary_key(self) -> list[str]:
         if self.primary_key is None:
-            raise ValueError(
+            raise PrimaryKeyError(
                 "`primary_key` must be provided to join `left` and `right`."
             )
         return self.primary_key
