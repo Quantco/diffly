@@ -22,12 +22,14 @@ def condition_equal_rows(
     abs_tol_by_column: Mapping[str, float],
     rel_tol_by_column: Mapping[str, float],
     abs_tol_temporal_by_column: Mapping[str, dt.timedelta],
+    max_list_lengths_by_column: Mapping[str, int] | None = None,
 ) -> pl.Expr:
     """Build an expression whether two rows are equal, based on all columns' data
     types."""
     if not columns:
         return pl.lit(True)
 
+    _max_list_lengths = max_list_lengths_by_column or {}
     return pl.all_horizontal(
         [
             condition_equal_columns(
@@ -37,6 +39,7 @@ def condition_equal_rows(
                 abs_tol=abs_tol_by_column[column],
                 rel_tol=rel_tol_by_column[column],
                 abs_tol_temporal=abs_tol_temporal_by_column[column],
+                max_list_length=_max_list_lengths.get(column, 0),
             )
             for column in columns
         ]
@@ -50,6 +53,7 @@ def condition_equal_columns(
     abs_tol: float = ABS_TOL_DEFAULT,
     rel_tol: float = REL_TOL_DEFAULT,
     abs_tol_temporal: dt.timedelta = ABS_TOL_TEMPORAL_DEFAULT,
+    max_list_length: int = 0,
 ) -> pl.Expr:
     """Build an expression whether two columns are equal, depending on the columns' data
     types."""
@@ -61,6 +65,7 @@ def condition_equal_columns(
         abs_tol=abs_tol,
         rel_tol=rel_tol,
         abs_tol_temporal=abs_tol_temporal,
+        max_list_length=max_list_length,
     )
 
 
@@ -95,6 +100,7 @@ def _compare_columns(
     abs_tol: float,
     rel_tol: float,
     abs_tol_temporal: dt.timedelta,
+    max_list_length: int = 0,
 ) -> pl.Expr:
     """Build an expression whether two expressions yield the same value.
 
@@ -133,10 +139,18 @@ def _compare_columns(
         elif isinstance(dtype_left, pl.List | pl.Array) and isinstance(
             dtype_right, pl.List | pl.Array
         ):
-            # As of polars 1.28, there is no way to access another column within
-            # `list.eval`. Hence, we necessarily need to resort to a primitive
-            # comparison in this case.
-            pass
+            result = _compare_sequence_columns(
+                col_left=col_left,
+                col_right=col_right,
+                dtype_left=dtype_left,
+                dtype_right=dtype_right,
+                max_list_length=max_list_length,
+                abs_tol=abs_tol,
+                rel_tol=rel_tol,
+                abs_tol_temporal=abs_tol_temporal,
+            )
+            if result is not None:
+                return result
 
     if (
         isinstance(dtype_left, pl.Enum)
@@ -165,6 +179,77 @@ def _compare_columns(
         rel_tol=rel_tol,
         abs_tol_temporal=abs_tol_temporal,
     )
+
+
+def _compare_sequence_columns(
+    col_left: pl.Expr,
+    col_right: pl.Expr,
+    dtype_left: DataType | DataTypeClass,
+    dtype_right: DataType | DataTypeClass,
+    max_list_length: int,
+    abs_tol: float,
+    rel_tol: float,
+    abs_tol_temporal: dt.timedelta,
+) -> pl.Expr | None:
+    """Compare Array/List columns element-wise with tolerance.
+
+    Returns ``None`` if the comparison cannot be performed element-wise (e.g. List vs
+    List without a known ``max_list_length``), signalling to the caller that it should
+    fall back to primitive comparison.
+    """
+    assert isinstance(dtype_left, pl.List | pl.Array)
+    assert isinstance(dtype_right, pl.List | pl.Array)
+    inner_left = dtype_left.inner
+    inner_right = dtype_right.inner
+
+    def _get_element(col: pl.Expr, dtype: DataType | DataTypeClass, i: int) -> pl.Expr:
+        if isinstance(dtype, pl.Array):
+            return col.arr.get(i)
+        return col.list.get(i, null_on_oob=True)
+
+    n: int | None = None
+    length_check: pl.Expr | None = None
+
+    if isinstance(dtype_left, pl.Array) and isinstance(dtype_right, pl.Array):
+        if dtype_left.shape != dtype_right.shape:
+            return pl.repeat(pl.lit(False), pl.len())
+        n = dtype_left.shape[0]
+    elif isinstance(dtype_left, pl.Array) and isinstance(dtype_right, pl.List):
+        n = dtype_left.shape[0]
+        length_check = col_right.list.len().eq(pl.lit(n))
+    elif isinstance(dtype_left, pl.List) and isinstance(dtype_right, pl.Array):
+        n = dtype_right.shape[0]
+        length_check = col_left.list.len().eq(pl.lit(n))
+    else:
+        # List vs List
+        if max_list_length == 0:
+            return None
+        n = max_list_length
+        length_check = col_left.list.len().eq_missing(col_right.list.len())
+
+    if n == 0:
+        if length_check is not None:
+            return _eq_missing(length_check, col_left, col_right)
+        return _eq_missing(pl.lit(True), col_left, col_right)
+
+    elements_match = pl.all_horizontal(
+        [
+            _compare_columns(
+                col_left=_get_element(col_left, dtype_left, i),
+                col_right=_get_element(col_right, dtype_right, i),
+                dtype_left=inner_left,
+                dtype_right=inner_right,
+                abs_tol=abs_tol,
+                rel_tol=rel_tol,
+                abs_tol_temporal=abs_tol_temporal,
+            )
+            for i in range(n)
+        ]
+    )
+
+    if length_check is not None:
+        return _eq_missing(length_check & elements_match, col_left, col_right)
+    return elements_match
 
 
 def _compare_primitive_columns(
