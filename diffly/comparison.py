@@ -138,12 +138,12 @@ class DataFrameComparison:
             if missing := (set(primary_key) - set(left_schema.names())):
                 raise PrimaryKeyError(
                     f"The primary key columns must be present in the left data frame, "
-                    f"but the following are missing: {', '.join(missing)}."
+                    f"but the following are missing: {', '.join(sorted(missing))}."
                 )
             if missing := (set(primary_key) - set(right_schema.names())):
                 raise PrimaryKeyError(
                     f"The primary key columns must be present in the right data frame, "
-                    f"but the following are missing: {', '.join(missing)}."
+                    f"but the following are missing: {', '.join(sorted(missing))}."
                 )
             if not is_primary_key(left, primary_key):
                 raise PrimaryKeyError(

@@ -9,7 +9,7 @@ import pytest
 from diffly import PrimaryKeyError, compare_frames
 
 
-@pytest.mark.parametrize("primary_key", ["name", ["name"], ("name")])
+@pytest.mark.parametrize("primary_key", ["name", ["name"], ("name",)])
 def test_primary_key_sequence_types(primary_key: str | Sequence[str]) -> None:
     left = pl.DataFrame({"name": ["a", "b"], "value": [1, 2]})
     right = pl.DataFrame({"name": ["a", "b"], "other": [3, 4]})
