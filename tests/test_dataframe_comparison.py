@@ -6,7 +6,7 @@ from collections.abc import Sequence
 import polars as pl
 import pytest
 
-from diffly import compare_frames
+from diffly import PrimaryKeyError, compare_frames
 
 
 @pytest.mark.parametrize("primary_key", ["name", ["name"], ("name")])
@@ -20,7 +20,7 @@ def test_primary_key_sequence_types(primary_key: str | Sequence[str]) -> None:
 def test_empty_primary_key() -> None:
     left = pl.DataFrame({"name": ["a", "b"], "value": [1, 2]})
     right = pl.DataFrame({"name": ["a", "b"], "other": [3, 4]})
-    with pytest.raises(ValueError, match="empty"):
+    with pytest.raises(PrimaryKeyError, match="empty"):
         compare_frames(left, right, primary_key=[])
 
 
@@ -28,19 +28,19 @@ def test_missing_primary_key() -> None:
     left = pl.DataFrame({"name": ["a", "b"], "value": [1, 2]})
     right = pl.DataFrame({"name": ["a", "b"], "other": [3, 4]})
     # Primary key that neither frame has
-    with pytest.raises(ValueError, match="left.*missing.*co2_emissions"):
+    with pytest.raises(PrimaryKeyError, match="left.*missing.*co2_emissions"):
         compare_frames(left, right, primary_key=["co2_emissions"])
     # Primary key that the right frame does not have
-    with pytest.raises(ValueError, match="right.*missing.*value"):
+    with pytest.raises(PrimaryKeyError, match="right.*missing.*value"):
         compare_frames(left, right, primary_key=["value"])
 
 
 def test_pk_violation() -> None:
     df_valid = pl.DataFrame({"id": ["a", "b"], "value": [1, 2]})
     df_duplicates = pl.DataFrame({"id": ["a", "a"], "value": [1, 2]})
-    with pytest.raises(ValueError, match="primary key.*left"):
+    with pytest.raises(PrimaryKeyError, match="primary key.*left"):
         compare_frames(df_duplicates, df_valid, primary_key=["id"])
-    with pytest.raises(ValueError, match="primary key.*right"):
+    with pytest.raises(PrimaryKeyError, match="primary key.*right"):
         compare_frames(df_valid, df_duplicates, primary_key=["id"])
 
 

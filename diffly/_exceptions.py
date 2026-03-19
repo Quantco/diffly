@@ -1,0 +1,6 @@
+# Copyright (c) QuantCo 2025-2026
+# SPDX-License-Identifier: BSD-3-Clause
+
+
+class PrimaryKeyError(ValueError):
+    """Raised when there is an issue with the primary key."""

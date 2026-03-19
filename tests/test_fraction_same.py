@@ -14,7 +14,7 @@ from polars.datatypes.group import (
     UNSIGNED_INTEGER_DTYPES,
 )
 
-from diffly import compare_frames
+from diffly import PrimaryKeyError, compare_frames
 
 from .utils import FRAME_TYPES, TYPING_FRAME_TYPES
 
@@ -23,7 +23,7 @@ def test_missing_primary_key_fraction_same() -> None:
     left = pl.DataFrame({"id": ["a", "b", "c"], "value": [1, 2, 3]})
     right = pl.DataFrame({"id": ["a", "b"], "value": [1, 2]})
     comparison = compare_frames(left, right)
-    with pytest.raises(ValueError):
+    with pytest.raises(PrimaryKeyError):
         _ = comparison.fraction_same("value")
 
 
