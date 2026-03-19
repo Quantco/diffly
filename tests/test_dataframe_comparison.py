@@ -28,10 +28,10 @@ def test_missing_primary_key() -> None:
     left = pl.DataFrame({"name": ["a", "b"], "value": [1, 2]})
     right = pl.DataFrame({"name": ["a", "b"], "other": [3, 4]})
     # Primary key that neither frame has
-    with pytest.raises(PrimaryKeyError, match="left.*missing.*co2_emissions"):
+    with pytest.raises(ValueError, match="left.*missing.*co2_emissions"):
         compare_frames(left, right, primary_key=["co2_emissions"])
     # Primary key that the right frame does not have
-    with pytest.raises(PrimaryKeyError, match="right.*missing.*value"):
+    with pytest.raises(ValueError, match="right.*missing.*value"):
         compare_frames(left, right, primary_key=["value"])
 
 
