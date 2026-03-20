@@ -231,17 +231,17 @@ def test_condition_equal_columns_temporal_tolerance() -> None:
     assert actual.to_list() == [True, False, False, True]
 
 
-def test_condition_equal_columns_list_different_lengths() -> None:
+def test_condition_equal_columns_two_lists() -> None:
     lhs = pl.DataFrame(
         {
-            "pk": [1, 2],
-            "a_left": [[1.0, 2.0], [3.0]],
+            "pk": [1, 2, 3, 4, 5],
+            "a_left": [[1.0, 2.0], [3.0], [5.0, None], None, None],
         },
     )
     rhs = pl.DataFrame(
         {
-            "pk": [1, 2],
-            "a_right": [[1.0, 2.0], [3.0, 4.0]],
+            "pk": [1, 2, 3, 4, 5],
+            "a_right": [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0], None],
         },
     )
 
@@ -259,36 +259,7 @@ def test_condition_equal_columns_list_different_lengths() -> None:
         )
         .to_series()
     )
-    assert actual.to_list() == [True, False]
-
-
-def test_condition_equal_columns_list_nulls() -> None:
-    lhs = pl.DataFrame(
-        {
-            "pk": [1, 2, 3],
-            "a_left": [[1.0, 2.0], None, None],
-        },
-    )
-    rhs = pl.DataFrame(
-        {
-            "pk": [1, 2, 3],
-            "a_right": [[1.0, 2.0], [3.0], None],
-        },
-    )
-
-    actual = (
-        lhs.join(rhs, on="pk", maintain_order="left")
-        .select(
-            condition_equal_columns(
-                "a",
-                dtype_left=lhs.schema["a_left"],
-                dtype_right=rhs.schema["a_right"],
-                max_list_length=2,
-            )
-        )
-        .to_series()
-    )
-    assert actual.to_list() == [True, False, True]
+    assert actual.to_list() == [True, False, False, False, True]
 
 
 def test_condition_equal_columns_array_vs_list_length_mismatch() -> None:
@@ -323,7 +294,7 @@ def test_condition_equal_columns_array_vs_list_length_mismatch() -> None:
     assert actual.to_list() == [True, False]
 
 
-def test_condition_equal_columns_array_different_shapes() -> None:
+def test_condition_equal_columns_two_arrays_different_shapes() -> None:
     lhs = pl.DataFrame(
         {
             "pk": [1],

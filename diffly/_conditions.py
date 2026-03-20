@@ -49,7 +49,7 @@ def condition_equal_columns(
     column: str,
     dtype_left: pl.DataType,
     dtype_right: pl.DataType,
-    max_list_length: int | None = None,
+    max_list_length: int | None,
     abs_tol: float = ABS_TOL_DEFAULT,
     rel_tol: float = REL_TOL_DEFAULT,
     abs_tol_temporal: dt.timedelta = ABS_TOL_TEMPORAL_DEFAULT,
@@ -201,28 +201,26 @@ def _compare_sequence_columns(
             return col.arr.get(i)
         return col.list.get(i, null_on_oob=True)
 
-    n_elements: int | None = None
-    has_same_length: pl.Expr | None = None
+    n_elements: int
+    has_same_length: pl.Expr
 
     if isinstance(dtype_left, pl.Array) and isinstance(dtype_right, pl.Array):
         if dtype_left.shape != dtype_right.shape:
             return pl.repeat(pl.lit(False), pl.len())
         n_elements = dtype_left.shape[0]
+        has_same_length = pl.repeat(pl.lit(True), pl.len())
     elif isinstance(dtype_left, pl.Array) and isinstance(dtype_right, pl.List):
         n_elements = dtype_left.shape[0]
         has_same_length = col_right.list.len().eq(pl.lit(n_elements))
     elif isinstance(dtype_left, pl.List) and isinstance(dtype_right, pl.Array):
         n_elements = dtype_right.shape[0]
         has_same_length = col_left.list.len().eq(pl.lit(n_elements))
-    else:
-        # List vs List
-        assert max_list_length is not None
+    else:  # pl.List vs pl.List
+        assert isinstance(max_list_length, int)
         n_elements = max_list_length
         has_same_length = col_left.list.len().eq_missing(col_right.list.len())
 
     if n_elements == 0:
-        if has_same_length is not None:
-            return _eq_missing(has_same_length, col_left, col_right)
         return _eq_missing(pl.lit(True), col_left, col_right)
 
     elements_match = pl.all_horizontal(
@@ -241,9 +239,7 @@ def _compare_sequence_columns(
         ]
     )
 
-    if has_same_length is not None:
-        return _eq_missing(has_same_length & elements_match, col_left, col_right)
-    return elements_match
+    return _eq_missing(has_same_length & elements_match, col_left, col_right)
 
 
 def _compare_primitive_columns(
