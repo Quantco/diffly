@@ -35,7 +35,7 @@ def condition_equal_rows(
                 column=column,
                 dtype_left=schema_left[column],
                 dtype_right=schema_right[column],
-                max_list_length=max_list_lengths_by_column.get(column, 0),
+                max_list_length=max_list_lengths_by_column.get(column),
                 abs_tol=abs_tol_by_column[column],
                 rel_tol=rel_tol_by_column[column],
                 abs_tol_temporal=abs_tol_temporal_by_column[column],
@@ -49,7 +49,7 @@ def condition_equal_columns(
     column: str,
     dtype_left: pl.DataType,
     dtype_right: pl.DataType,
-    max_list_length: int,
+    max_list_length: int | None = None,
     abs_tol: float = ABS_TOL_DEFAULT,
     rel_tol: float = REL_TOL_DEFAULT,
     abs_tol_temporal: dt.timedelta = ABS_TOL_TEMPORAL_DEFAULT,
@@ -96,7 +96,7 @@ def _compare_columns(
     col_right: pl.Expr,
     dtype_left: DataType | DataTypeClass,
     dtype_right: DataType | DataTypeClass,
-    max_list_length: int,
+    max_list_length: int | None,
     abs_tol: float,
     rel_tol: float,
     abs_tol_temporal: dt.timedelta,
@@ -185,7 +185,7 @@ def _compare_sequence_columns(
     col_right: pl.Expr,
     dtype_left: DataType | DataTypeClass,
     dtype_right: DataType | DataTypeClass,
-    max_list_length: int,
+    max_list_length: int | None,
     abs_tol: float,
     rel_tol: float,
     abs_tol_temporal: dt.timedelta,
@@ -216,6 +216,7 @@ def _compare_sequence_columns(
         has_same_length = col_left.list.len().eq(pl.lit(n_elements))
     else:
         # List vs List
+        assert max_list_length is not None
         n_elements = max_list_length
         has_same_length = col_left.list.len().eq_missing(col_right.list.len())
 

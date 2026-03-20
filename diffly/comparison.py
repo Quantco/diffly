@@ -748,7 +748,7 @@ class DataFrameComparison:
             abs_tol=self.abs_tol_by_column[column],
             rel_tol=self.rel_tol_by_column[column],
             abs_tol_temporal=self.abs_tol_temporal_by_column[column],
-            max_list_length=self._max_list_lengths.get(column, 0),
+            max_list_length=self._max_list_lengths.get(column),
         )
 
     def _equal_rows(self) -> bool:
