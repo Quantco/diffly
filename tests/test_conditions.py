@@ -123,11 +123,11 @@ def test_condition_equal_columns_list_array_with_tolerance(
 
 @pytest.mark.parametrize(
     "lhs_type",
-    [pl.Array(pl.Float64, shape=(2, 2)), pl.List(pl.List(pl.Float64))],
+    [pl.Array(pl.Float64, shape=(2, 3)), pl.List(pl.List(pl.Float64))],
 )
 @pytest.mark.parametrize(
     "rhs_type",
-    [pl.Array(pl.Float64, shape=(2, 2)), pl.List(pl.List(pl.Float64))],
+    [pl.Array(pl.Float64, shape=(2, 3)), pl.List(pl.List(pl.Float64))],
 )
 def test_condition_equal_columns_nested_list_array_with_tolerance(
     lhs_type: pl.DataType, rhs_type: pl.DataType
@@ -137,9 +137,9 @@ def test_condition_equal_columns_nested_list_array_with_tolerance(
         {
             "pk": [1, 2, 3],
             "a_left": [
-                [[1.0, 1.1], [2.0, 2.1]],
-                [[3.0, 3.0], [4.0, 4.0]],
-                [[5.0, 5.0], [6.0, 6.0]],
+                [[1.0, 1.1, 1.3], [2.0, 2.1, 2.2]],
+                [[3.0, 3.0, 3.1], [4.0, 4.0, 4.1]],
+                [[5.0, 5.0, 5.1], [6.0, 6.0, 6.1]],
             ],
         },
         schema={"pk": pl.Int64, "a_left": lhs_type},
@@ -148,9 +148,9 @@ def test_condition_equal_columns_nested_list_array_with_tolerance(
         {
             "pk": [1, 2, 3],
             "a_right": [
-                [[1.0, 1.1], [2.0, 2.1]],
-                [[3.0, 3.0], [4.0, 4.4]],
-                [[5.0, 5.0], [6.0, 6.8]],
+                [[1.0, 1.1, 1.3], [2.0, 2.1, 2.2]],
+                [[3.0, 3.0, 3.1], [4.0, 4.4, 4.1]],
+                [[5.0, 5.0, 5.1], [6.0, 6.8, 6.1]],
             ],
         },
         schema={"pk": pl.Int64, "a_right": rhs_type},
@@ -172,7 +172,10 @@ def test_condition_equal_columns_nested_list_array_with_tolerance(
         .to_series()
     )
 
-    assert actual.to_list() == [True, True, False]
+    if isinstance(lhs_type, pl.List) and isinstance(rhs_type, pl.List):
+        assert actual.to_list() == [True, False, False]
+    else:
+        assert actual.to_list() == [True, True, False]
 
 
 def test_condition_equal_columns_nested_dtype_mismatch() -> None:

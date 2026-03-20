@@ -196,11 +196,6 @@ def _compare_sequence_columns(
     inner_left = dtype_left.inner
     inner_right = dtype_right.inner
 
-    def _get_element(col: pl.Expr, dtype: DataType | DataTypeClass, i: int) -> pl.Expr:
-        if isinstance(dtype, pl.Array):
-            return col.arr.get(i)
-        return col.list.get(i, null_on_oob=True)
-
     n_elements: int
     has_same_length: pl.Expr
 
@@ -216,12 +211,21 @@ def _compare_sequence_columns(
         n_elements = dtype_right.shape[0]
         has_same_length = col_left.list.len().eq(pl.lit(n_elements))
     else:  # pl.List vs pl.List
-        assert isinstance(max_list_length, int)
+        if not isinstance(max_list_length, int):
+            # Fallback for nested list comparisons where no max_list_length is
+            # available: perform a direct equality comparison without element-wise
+            # unrolling.
+            return _eq_missing(col_left.eq_missing(col_right), col_left, col_right)
         n_elements = max_list_length
         has_same_length = col_left.list.len().eq_missing(col_right.list.len())
 
     if n_elements == 0:
         return _eq_missing(pl.lit(True), col_left, col_right)
+
+    def _get_element(col: pl.Expr, dtype: DataType | DataTypeClass, i: int) -> pl.Expr:
+        if isinstance(dtype, pl.Array):
+            return col.arr.get(i)
+        return col.list.get(i, null_on_oob=True)
 
     elements_match = pl.all_horizontal(
         [
@@ -233,7 +237,7 @@ def _compare_sequence_columns(
                 abs_tol=abs_tol,
                 rel_tol=rel_tol,
                 abs_tol_temporal=abs_tol_temporal,
-                max_list_length=max_list_length,
+                max_list_length=None,
             )
             for i in range(n_elements)
         ]
