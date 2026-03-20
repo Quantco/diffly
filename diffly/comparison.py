@@ -508,7 +508,7 @@ class DataFrameComparison:
                     columns=common_columns,
                     schema_left=self.left_schema,
                     schema_right=self.right_schema,
-                    max_list_lengths_by_column=self._max_list_lengths,
+                    max_list_lengths_by_column=self._max_list_lengths_by_column,
                     abs_tol_by_column=self.abs_tol_by_column,
                     rel_tol_by_column=self.rel_tol_by_column,
                     abs_tol_temporal_by_column=self.abs_tol_temporal_by_column,
@@ -710,7 +710,7 @@ class DataFrameComparison:
         return list(subset)
 
     @cached_property
-    def _max_list_lengths(self) -> dict[str, int]:
+    def _max_list_lengths_by_column(self) -> dict[str, int]:
         list_columns = [
             col
             for col in self._other_common_columns
@@ -734,7 +734,7 @@ class DataFrameComparison:
             columns=columns,
             schema_left=self.left_schema,
             schema_right=self.right_schema,
-            max_list_lengths_by_column=self._max_list_lengths,
+            max_list_lengths_by_column=self._max_list_lengths_by_column,
             abs_tol_by_column=self.abs_tol_by_column,
             rel_tol_by_column=self.rel_tol_by_column,
             abs_tol_temporal_by_column=self.abs_tol_temporal_by_column,
@@ -748,7 +748,7 @@ class DataFrameComparison:
             abs_tol=self.abs_tol_by_column[column],
             rel_tol=self.rel_tol_by_column[column],
             abs_tol_temporal=self.abs_tol_temporal_by_column[column],
-            max_list_length=self._max_list_lengths.get(column, 0),
+            max_list_length=self._max_list_lengths_by_column.get(column),
         )
 
     def _equal_rows(self) -> bool:

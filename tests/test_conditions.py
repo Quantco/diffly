@@ -121,6 +121,60 @@ def test_condition_equal_columns_list_array_with_tolerance(
     assert actual.to_list() == [True, True, False]
 
 
+@pytest.mark.parametrize(
+    "lhs_type",
+    [pl.Array(pl.Float64, shape=(2, 2)), pl.List(pl.List(pl.Float64))],
+)
+@pytest.mark.parametrize(
+    "rhs_type",
+    [pl.Array(pl.Float64, shape=(2, 2)), pl.List(pl.List(pl.Float64))],
+)
+def test_condition_equal_columns_nested_list_array_with_tolerance(
+    lhs_type: pl.DataType, rhs_type: pl.DataType
+) -> None:
+    # Arrange
+    lhs = pl.DataFrame(
+        {
+            "pk": [1, 2, 3],
+            "a_left": [
+                [[1.0, 1.1], [2.0, 2.1]],
+                [[3.0, 3.0], [4.0, 4.0]],
+                [[5.0, 5.0], [6.0, 6.0]],
+            ],
+        },
+        schema={"pk": pl.Int64, "a_left": lhs_type},
+    )
+    rhs = pl.DataFrame(
+        {
+            "pk": [1, 2, 3],
+            "a_right": [
+                [[1.0, 1.1], [2.0, 2.1]],
+                [[3.0, 3.0], [4.0, 4.4]],
+                [[5.0, 5.0], [6.0, 6.8]],
+            ],
+        },
+        schema={"pk": pl.Int64, "a_right": rhs_type},
+    )
+
+    # Act
+    actual = (
+        lhs.join(rhs, on="pk", maintain_order="left")
+        .select(
+            condition_equal_columns(
+                "a",
+                dtype_left=lhs.schema["a_left"],
+                dtype_right=rhs.schema["a_right"],
+                abs_tol=0.5,
+                rel_tol=0,
+                max_list_length=2,
+            )
+        )
+        .to_series()
+    )
+
+    assert actual.to_list() == [True, True, False]
+
+
 def test_condition_equal_columns_nested_dtype_mismatch() -> None:
     # Arrange
     lhs = pl.DataFrame(
