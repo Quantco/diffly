@@ -193,8 +193,6 @@ def _compare_sequence_columns(
     """Compare Array/List columns element-wise with tolerance."""
     assert isinstance(dtype_left, pl.List | pl.Array)
     assert isinstance(dtype_right, pl.List | pl.Array)
-    inner_left = dtype_left.inner
-    inner_right = dtype_right.inner
 
     n_elements: int
     has_same_length: pl.Expr
@@ -232,8 +230,8 @@ def _compare_sequence_columns(
             _compare_columns(
                 col_left=_get_element(col_left, dtype_left, i),
                 col_right=_get_element(col_right, dtype_right, i),
-                dtype_left=inner_left,
-                dtype_right=inner_right,
+                dtype_left=dtype_left.inner,
+                dtype_right=dtype_right.inner,
                 abs_tol=abs_tol,
                 rel_tol=rel_tol,
                 abs_tol_temporal=abs_tol_temporal,

@@ -382,20 +382,28 @@ def test_condition_equal_columns_two_arrays_different_shapes() -> None:
     assert actual.to_list() == [False]
 
 
-def test_condition_equal_columns_empty_arrays() -> None:
+@pytest.mark.parametrize(
+    "lhs_type", [pl.Array(pl.Float64, shape=0), pl.List(pl.Float64)]
+)
+@pytest.mark.parametrize(
+    "rhs_type", [pl.Array(pl.Float64, shape=0), pl.List(pl.Float64)]
+)
+def test_condition_equal_columns_empty_list_array(
+    lhs_type: pl.DataType, rhs_type: pl.DataType
+) -> None:
     lhs = pl.DataFrame(
         {
             "pk": [1, 2],
             "a_left": [[], None],
         },
-        schema={"pk": pl.Int64, "a_left": pl.Array(pl.Float64, shape=0)},
+        schema={"pk": pl.Int64, "a_left": lhs_type},
     )
     rhs = pl.DataFrame(
         {
             "pk": [1, 2],
             "a_right": [[], None],
         },
-        schema={"pk": pl.Int64, "a_right": pl.Array(pl.Float64, shape=0)},
+        schema={"pk": pl.Int64, "a_right": rhs_type},
     )
 
     actual = (
@@ -411,37 +419,6 @@ def test_condition_equal_columns_empty_arrays() -> None:
         .to_series()
     )
     assert actual.to_list() == [True, True]
-
-
-def test_condition_equal_columns_empty_lists() -> None:
-    lhs = pl.DataFrame(
-        {
-            "pk": [1, 2, 3],
-            "a_left": [[], None, []],
-        },
-        schema={"pk": pl.Int64, "a_left": pl.List(pl.Float64)},
-    )
-    rhs = pl.DataFrame(
-        {
-            "pk": [1, 2, 3],
-            "a_right": [[], None, None],
-        },
-        schema={"pk": pl.Int64, "a_right": pl.List(pl.Float64)},
-    )
-
-    actual = (
-        lhs.join(rhs, on="pk", maintain_order="left")
-        .select(
-            condition_equal_columns(
-                "a",
-                dtype_left=lhs.schema["a_left"],
-                dtype_right=rhs.schema["a_right"],
-                max_list_length=0,
-            )
-        )
-        .to_series()
-    )
-    assert actual.to_list() == [True, True, False]
 
 
 @pytest.mark.parametrize(
