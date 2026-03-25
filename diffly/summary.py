@@ -146,9 +146,11 @@ class Summary:
             self._print_diff(console)
 
     def _print_equal(self, console: Console) -> None:
-        text = Text(
-            "--- Data frames match exactly! ---", style="green bold", justify="center"
-        )
+        if self._comparison.num_rows_left() == 0:
+            message = "--- Data frames are empty, but their schema matches exactly! ---"
+        else:
+            message = "--- Data frames match exactly! ---"
+        text = Text(message, style="green bold", justify="center")
         text.align("center", console.width)
         console.print(text)
 

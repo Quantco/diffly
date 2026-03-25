@@ -1,1 +1,1 @@
-                            --- Data frames match exactly! ---
+             --- Data frames are empty, but their schema matches exactly! ---

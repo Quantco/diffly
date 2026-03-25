@@ -1,1 +1,1 @@
-[1;32m                            --- Data frames match exactly! ---                            [0m
+[1;32m             --- Data frames are empty, but their schema matches exactly! ---             [0m
