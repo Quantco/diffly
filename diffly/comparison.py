@@ -508,6 +508,7 @@ class DataFrameComparison:
                     columns=common_columns,
                     schema_left=self.left_schema,
                     schema_right=self.right_schema,
+                    max_list_lengths_by_column=self._max_list_lengths_by_column,
                     abs_tol_by_column=self.abs_tol_by_column,
                     rel_tol_by_column=self.rel_tol_by_column,
                     abs_tol_temporal_by_column=self.abs_tol_temporal_by_column,
@@ -708,11 +709,32 @@ class DataFrameComparison:
             raise ValueError(f"{difference} are not common columns.")
         return list(subset)
 
+    @cached_property
+    def _max_list_lengths_by_column(self) -> dict[str, int]:
+        list_columns = [
+            col
+            for col in self._other_common_columns
+            if isinstance(self.left_schema[col], pl.List)
+            and isinstance(self.right_schema[col], pl.List)
+        ]
+        if not list_columns:
+            return {}
+
+        exprs = [pl.col(col).list.len().max().alias(col) for col in list_columns]
+        [left_max, right_max] = pl.collect_all(
+            [self.left.select(exprs), self.right.select(exprs)]
+        )
+        return {
+            col: max(int(left_max[col].item() or 0), int(right_max[col].item() or 0))
+            for col in list_columns
+        }
+
     def _condition_equal_rows(self, columns: list[str]) -> pl.Expr:
         return condition_equal_rows(
             columns=columns,
             schema_left=self.left_schema,
             schema_right=self.right_schema,
+            max_list_lengths_by_column=self._max_list_lengths_by_column,
             abs_tol_by_column=self.abs_tol_by_column,
             rel_tol_by_column=self.rel_tol_by_column,
             abs_tol_temporal_by_column=self.abs_tol_temporal_by_column,
@@ -726,6 +748,7 @@ class DataFrameComparison:
             abs_tol=self.abs_tol_by_column[column],
             rel_tol=self.rel_tol_by_column[column],
             abs_tol_temporal=self.abs_tol_temporal_by_column[column],
+            max_list_length=self._max_list_lengths_by_column.get(column),
         )
 
     def _equal_rows(self) -> bool:

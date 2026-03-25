@@ -32,6 +32,7 @@ def test_condition_equal_columns_struct() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
+                max_list_length=None,
                 abs_tol=0.5,
                 rel_tol=0,
             )
@@ -66,6 +67,7 @@ def test_condition_equal_columns_different_struct_fields() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
+                max_list_length=None,
             )
         )
         .to_series()
@@ -81,21 +83,21 @@ def test_condition_equal_columns_different_struct_fields() -> None:
 @pytest.mark.parametrize(
     "rhs_type", [pl.Array(pl.Float64, shape=2), pl.List(pl.Float64)]
 )
-def test_condition_equal_columns_list_array_equal_exact(
+def test_condition_equal_columns_list_array_with_tolerance(
     lhs_type: pl.DataType, rhs_type: pl.DataType
 ) -> None:
     # Arrange
     lhs = pl.DataFrame(
         {
-            "pk": [1, 2],
-            "a_left": [[1.0, 1.1], [2.0, 2.1]],
+            "pk": [1, 2, 3],
+            "a_left": [[1.0, 1.1], [2.0, 2.1], [3.0, 3.0]],
         },
         schema={"pk": pl.Int64, "a_left": lhs_type},
     )
     rhs = pl.DataFrame(
         {
-            "pk": [1, 2],
-            "a_right": [[1.0, 1.1], [2.0, 2.2]],
+            "pk": [1, 2, 3],
+            "a_right": [[1.0, 1.1], [2.0, 2.2], [3.0, 3.7]],
         },
         schema={"pk": pl.Int64, "a_right": rhs_type},
     )
@@ -110,13 +112,70 @@ def test_condition_equal_columns_list_array_equal_exact(
                 dtype_right=rhs.schema["a_right"],
                 abs_tol=0.5,
                 rel_tol=0,
+                max_list_length=2,
             )
         )
         .to_series()
     )
 
-    # Assert
-    assert actual.to_list() == [True, False]
+    assert actual.to_list() == [True, True, False]
+
+
+@pytest.mark.parametrize(
+    "lhs_type",
+    [pl.Array(pl.Float64, shape=(2, 3)), pl.List(pl.List(pl.Float64))],
+)
+@pytest.mark.parametrize(
+    "rhs_type",
+    [pl.Array(pl.Float64, shape=(2, 3)), pl.List(pl.List(pl.Float64))],
+)
+def test_condition_equal_columns_nested_list_array_with_tolerance(
+    lhs_type: pl.DataType, rhs_type: pl.DataType
+) -> None:
+    # Arrange
+    lhs = pl.DataFrame(
+        {
+            "pk": [1, 2, 3],
+            "a_left": [
+                [[1.0, 1.1, 1.3], [2.0, 2.1, 2.2]],
+                [[3.0, 3.0, 3.1], [4.0, 4.0, 4.1]],
+                [[5.0, 5.0, 5.1], [6.0, 6.0, 6.1]],
+            ],
+        },
+        schema={"pk": pl.Int64, "a_left": lhs_type},
+    )
+    rhs = pl.DataFrame(
+        {
+            "pk": [1, 2, 3],
+            "a_right": [
+                [[1.0, 1.1, 1.3], [2.0, 2.1, 2.2]],
+                [[3.0, 3.0, 3.1], [4.0, 4.4, 4.1]],
+                [[5.0, 5.0, 5.1], [6.0, 6.8, 6.1]],
+            ],
+        },
+        schema={"pk": pl.Int64, "a_right": rhs_type},
+    )
+
+    # Act
+    actual = (
+        lhs.join(rhs, on="pk", maintain_order="left")
+        .select(
+            condition_equal_columns(
+                "a",
+                dtype_left=lhs.schema["a_left"],
+                dtype_right=rhs.schema["a_right"],
+                abs_tol=0.5,
+                rel_tol=0,
+                max_list_length=2,
+            )
+        )
+        .to_series()
+    )
+
+    if isinstance(lhs_type, pl.List) and isinstance(rhs_type, pl.List):
+        assert actual.to_list() == [True, False, False]
+    else:
+        assert actual.to_list() == [True, True, False]
 
 
 def test_condition_equal_columns_nested_dtype_mismatch() -> None:
@@ -142,6 +201,7 @@ def test_condition_equal_columns_nested_dtype_mismatch() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
+                max_list_length=None,
             )
         )
         .to_series()
@@ -174,6 +234,7 @@ def test_condition_equal_columns_exactly_one_nested() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
+                max_list_length=None,
             )
         )
         .to_series()
@@ -216,6 +277,7 @@ def test_condition_equal_columns_temporal_tolerance() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
+                max_list_length=None,
                 abs_tol_temporal=dt.timedelta(seconds=2),
             )
         )
@@ -224,6 +286,139 @@ def test_condition_equal_columns_temporal_tolerance() -> None:
 
     # Assert
     assert actual.to_list() == [True, False, False, True]
+
+
+def test_condition_equal_columns_two_lists() -> None:
+    lhs = pl.DataFrame(
+        {
+            "pk": [1, 2, 3, 4, 5],
+            "a_left": [[1.0, 2.0], [3.0], [5.0, None], None, None],
+        },
+    )
+    rhs = pl.DataFrame(
+        {
+            "pk": [1, 2, 3, 4, 5],
+            "a_right": [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0], None],
+        },
+    )
+
+    actual = (
+        lhs.join(rhs, on="pk", maintain_order="left")
+        .select(
+            condition_equal_columns(
+                "a",
+                dtype_left=lhs.schema["a_left"],
+                dtype_right=rhs.schema["a_right"],
+                abs_tol=0.5,
+                rel_tol=0,
+                max_list_length=2,
+            )
+        )
+        .to_series()
+    )
+    assert actual.to_list() == [True, False, False, False, True]
+
+
+def test_condition_equal_columns_array_vs_list_length_mismatch() -> None:
+    lhs = pl.DataFrame(
+        {
+            "pk": [1, 2],
+            "a_left": [[1.0, 2.0], [3.0, 4.0]],
+        },
+        schema={"pk": pl.Int64, "a_left": pl.Array(pl.Float64, shape=2)},
+    )
+    rhs = pl.DataFrame(
+        {
+            "pk": [1, 2],
+            "a_right": [[1.0, 2.0], [3.0]],
+        },
+    )
+
+    actual = (
+        lhs.join(rhs, on="pk", maintain_order="left")
+        .select(
+            condition_equal_columns(
+                "a",
+                dtype_left=lhs.schema["a_left"],
+                dtype_right=rhs.schema["a_right"],
+                max_list_length=None,
+                abs_tol=0.5,
+                rel_tol=0,
+            )
+        )
+        .to_series()
+    )
+    assert actual.to_list() == [True, False]
+
+
+def test_condition_equal_columns_two_arrays_different_shapes() -> None:
+    lhs = pl.DataFrame(
+        {
+            "pk": [1],
+            "a_left": [[1.0, 2.0]],
+        },
+        schema={"pk": pl.Int64, "a_left": pl.Array(pl.Float64, shape=2)},
+    )
+    rhs = pl.DataFrame(
+        {
+            "pk": [1],
+            "a_right": [[1.0, 2.0, 3.0]],
+        },
+        schema={"pk": pl.Int64, "a_right": pl.Array(pl.Float64, shape=3)},
+    )
+
+    actual = (
+        lhs.join(rhs, on="pk", maintain_order="left")
+        .select(
+            condition_equal_columns(
+                "a",
+                dtype_left=lhs.schema["a_left"],
+                dtype_right=rhs.schema["a_right"],
+                max_list_length=None,
+            )
+        )
+        .to_series()
+    )
+    assert actual.to_list() == [False]
+
+
+@pytest.mark.parametrize(
+    "lhs_type", [pl.Array(pl.Float64, shape=0), pl.List(pl.Float64)]
+)
+@pytest.mark.parametrize(
+    "rhs_type", [pl.Array(pl.Float64, shape=0), pl.List(pl.Float64)]
+)
+def test_condition_equal_columns_empty_list_array(
+    lhs_type: pl.DataType, rhs_type: pl.DataType
+) -> None:
+    lhs = pl.DataFrame(
+        {
+            "pk": [1, 2],
+            "a_left": [[], None],
+        },
+        schema={"pk": pl.Int64, "a_left": lhs_type},
+    )
+    rhs = pl.DataFrame(
+        {
+            "pk": [1, 2],
+            "a_right": [[], None],
+        },
+        schema={"pk": pl.Int64, "a_right": rhs_type},
+    )
+
+    actual = (
+        lhs.join(rhs, on="pk", maintain_order="left")
+        .select(
+            condition_equal_columns(
+                "a",
+                dtype_left=lhs.schema["a_left"],
+                dtype_right=rhs.schema["a_right"],
+                max_list_length=None,
+            )
+        )
+        .to_series()
+    )
+    assert actual.to_list() == [True, True]
 
 
 @pytest.mark.parametrize(
