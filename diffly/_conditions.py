@@ -183,17 +183,14 @@ def _compare_columns(
 def _compare_sequence_columns(
     col_left: pl.Expr,
     col_right: pl.Expr,
-    dtype_left: DataType | DataTypeClass,
-    dtype_right: DataType | DataTypeClass,
+    dtype_left: pl.List | pl.Array,
+    dtype_right: pl.List | pl.Array,
     max_list_length: int | None,
     abs_tol: float,
     rel_tol: float,
     abs_tol_temporal: dt.timedelta,
 ) -> pl.Expr:
     """Compare Array/List columns element-wise with tolerance."""
-    assert isinstance(dtype_left, pl.List | pl.Array)
-    assert isinstance(dtype_right, pl.List | pl.Array)
-
     n_elements: int
     has_same_length: pl.Expr
 
