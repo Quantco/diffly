@@ -3,6 +3,7 @@
 
 import datetime as dt
 from collections.abc import Mapping
+from typing import cast
 
 import polars as pl
 from polars.datatypes import DataType, DataTypeClass
@@ -206,12 +207,7 @@ def _compare_sequence_columns(
         n_elements = dtype_right.shape[0]
         has_same_length = col_left.list.len().eq(pl.lit(n_elements))
     else:  # pl.List vs pl.List
-        if not isinstance(max_list_length, int):
-            # Fallback for nested list comparisons where no max_list_length is
-            # available: perform a direct equality comparison without element-wise
-            # unrolling.
-            return _eq_missing(col_left.eq_missing(col_right), col_left, col_right)
-        n_elements = max_list_length
+        n_elements = cast(int, max_list_length)
         has_same_length = col_left.list.len().eq_missing(col_right.list.len())
 
     if n_elements == 0:
@@ -232,7 +228,7 @@ def _compare_sequence_columns(
                 abs_tol=abs_tol,
                 rel_tol=rel_tol,
                 abs_tol_temporal=abs_tol_temporal,
-                max_list_length=None,
+                max_list_length=max_list_length,
             )
             for i in range(n_elements)
         ]
