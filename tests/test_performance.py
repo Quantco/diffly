@@ -94,13 +94,12 @@ def test_element_wise_comparison_slower_than_eq_missing_for_list_columns() -> No
 
     col_left = f"val_{Side.LEFT}"
     col_right = f"val_{Side.RIGHT}"
-    base_list = list(range(list_len))
-    df = pl.LazyFrame(
+    df = pl.DataFrame(
         {
-            col_left: pl.repeat(pl.lit(base_list), n_rows),
-            col_right: pl.repeat(pl.lit(base_list), n_rows),
+            col_left: [list(range(list_len)) for _ in range(n_rows)],
+            col_right: [list(range(list_len)) for _ in range(n_rows)],
         }
-    ).collect()
+    )
 
     times_eq = []
     times_cond = []
