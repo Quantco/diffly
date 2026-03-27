@@ -206,7 +206,11 @@ def _compare_sequence_columns(
         n_elements = dtype_right.shape[0]
         has_same_length = col_left.list.len().eq(pl.lit(n_elements))
     else:  # pl.List vs pl.List
-        assert max_list_length is not None
+        if max_list_length is None:
+            raise ValueError(
+                "max_list_length must be provided for List-vs-List comparisons "
+                "in _compare_sequence_columns()."
+            )
         n_elements = max_list_length
         has_same_length = col_left.list.len().eq_missing(col_right.list.len())
 
