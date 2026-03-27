@@ -7,6 +7,7 @@ import polars as pl
 import pytest
 
 from diffly._conditions import _can_compare_dtypes, condition_equal_columns
+from diffly.comparison import compare_frames
 
 
 def test_condition_equal_columns_struct() -> None:
@@ -14,17 +15,22 @@ def test_condition_equal_columns_struct() -> None:
     lhs = pl.DataFrame(
         {
             "pk": [1, 2],
-            "a_left": [{"x": 1.0, "y": 2.0}, {"x": 2.0, "y": 2.1}],
+            "a": [{"x": 1.0, "y": 2.0}, {"x": 2.0, "y": 2.1}],
         }
     )
     rhs = pl.DataFrame(
         {
             "pk": [1, 2],
-            "a_right": [{"y": 2.0, "x": 1.1}, {"y": 2.7, "x": 2.1}],
+            "a": [{"y": 2.0, "x": 1.1}, {"y": 2.7, "x": 2.1}],
         }
     )
 
+    c = compare_frames(lhs, rhs, primary_key="pk", abs_tol=0.5, rel_tol=0)
+    assert c._max_list_lengths_by_column == {}
+
     # Act
+    lhs = lhs.rename({"a": "a_left"})
+    rhs = rhs.rename({"a": "a_right"})
     actual = (
         lhs.join(rhs, on="pk", maintain_order="left")
         .select(
@@ -33,8 +39,8 @@ def test_condition_equal_columns_struct() -> None:
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
                 max_list_length=None,
-                abs_tol=0.5,
-                rel_tol=0,
+                abs_tol=c.abs_tol_by_column["a"],
+                rel_tol=c.rel_tol_by_column["a"],
             )
         )
         .to_series()
