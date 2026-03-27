@@ -711,8 +711,8 @@ class DataFrameComparison:
 
     @cached_property
     def _max_list_lengths_by_column(self) -> dict[str, int]:
-        """Max list length across all nesting levels, for columns where either side
-        contains a List anywhere in its type tree."""
+        """Max list length across all nesting levels, for columns where both sides
+        contain a List anywhere in their type tree."""
         left_exprs: list[pl.Expr] = []
         right_exprs: list[pl.Expr] = []
         columns: list[str] = []
@@ -720,7 +720,7 @@ class DataFrameComparison:
         for col in self._other_common_columns:
             col_left = _list_length_exprs(pl.col(col), self.left_schema[col])
             col_right = _list_length_exprs(pl.col(col), self.right_schema[col])
-            if not col_left and not col_right:
+            if not (col_left and col_right):
                 continue
             columns.append(col)
             left_exprs.append(_max_or_zero(col_left).alias(col))

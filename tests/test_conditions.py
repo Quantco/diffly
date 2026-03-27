@@ -103,7 +103,7 @@ def test_condition_equal_columns_list_array_with_tolerance(
     )
 
     max_list_length: int | None = None
-    if isinstance(lhs_type, pl.List) or isinstance(rhs_type, pl.List):
+    if isinstance(lhs_type, pl.List) and isinstance(rhs_type, pl.List):
         max_list_length = 2
 
     # Act
@@ -161,7 +161,7 @@ def test_condition_equal_columns_nested_list_array_with_tolerance(
     )
 
     max_list_length: int | None = None
-    if isinstance(lhs_type, pl.List) or isinstance(rhs_type, pl.List):
+    if isinstance(lhs_type, pl.List) and isinstance(rhs_type, pl.List):
         max_list_length = 3
 
     # Act
