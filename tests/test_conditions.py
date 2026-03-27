@@ -6,7 +6,11 @@ import datetime as dt
 import polars as pl
 import pytest
 
-from diffly._conditions import _can_compare_dtypes, condition_equal_columns
+from diffly._conditions import (
+    _can_compare_dtypes,
+    _needs_element_wise_comparison,
+    condition_equal_columns,
+)
 from diffly.comparison import compare_frames
 
 
@@ -509,6 +513,45 @@ def test_condition_equal_columns_lists_only_inner() -> None:
 
     # Assert
     assert c._max_list_lengths_by_column == {"a": 3}
+    assert actual.to_list() == [True, False]
+
+
+def test_condition_equal_columns_list_of_different_enums() -> None:
+    # Arrange
+    first_enum = pl.Enum(["one", "two"])
+    second_enum = pl.Enum(["one", "two", "three"])
+
+    lhs = pl.DataFrame(
+        {"pk": [1, 2], "a": [["one", "two"], ["one", "one"]]},
+        schema_overrides={"a": pl.List(first_enum)},
+    )
+    rhs = pl.DataFrame(
+        {"pk": [1, 2], "a": [["one", "two"], ["one", "three"]]},
+        schema_overrides={"a": pl.List(second_enum)},
+    )
+    c = compare_frames(lhs, rhs, primary_key="pk")
+
+    # Act
+    lhs = lhs.rename({"a": "a_left"})
+    rhs = rhs.rename({"a": "a_right"})
+    actual = (
+        lhs.join(rhs, on="pk", maintain_order="left")
+        .select(
+            condition_equal_columns(
+                "a",
+                dtype_left=lhs.schema["a_left"],
+                dtype_right=rhs.schema["a_right"],
+                max_list_length=c._max_list_lengths_by_column.get("a"),
+                abs_tol=c.abs_tol_by_column["a"],
+                rel_tol=c.rel_tol_by_column["a"],
+            )
+        )
+        .to_series()
+    )
+
+    # Assert
+    assert c._max_list_lengths_by_column == {"a": 2}
+    assert _needs_element_wise_comparison(first_enum, second_enum)
     assert actual.to_list() == [True, False]
 
 
