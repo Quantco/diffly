@@ -153,11 +153,9 @@ def _compare_columns(
                 )
             return col_left.eq_missing(col_right)
 
-    if (
-        isinstance(dtype_left, pl.Enum)
-        and isinstance(dtype_right, pl.Enum)
-        and dtype_left != dtype_right
-    ) or _enum_and_categorical(dtype_left, dtype_right):
+    if _different_enums(dtype_left, dtype_right) or _enum_and_categorical(
+        dtype_left, dtype_right
+    ):
         # Enums with different categories as well as enums and categoricals
         # can't be compared directly.
         # Fall back to comparison of strings.
@@ -269,6 +267,10 @@ def _needs_element_wise_comparison(
         return True
     if _is_temporal_pair(dtype_left, dtype_right):
         return True
+    if _different_enums(dtype_left, dtype_right) or _enum_and_categorical(
+        dtype_left, dtype_right
+    ):
+        return True
     if isinstance(dtype_left, pl.Struct) and isinstance(dtype_right, pl.Struct):
         fields_left = {f.name: f.dtype for f in dtype_left.fields}
         fields_right = {f.name: f.dtype for f in dtype_right.fields}
@@ -313,6 +315,12 @@ def _eq_missing(expr: pl.Expr, lhs: pl.Expr, rhs: pl.Expr) -> pl.Expr:
 def _eq_missing_with_nan(expr: pl.Expr, lhs: pl.Expr, rhs: pl.Expr) -> pl.Expr:
     both_nan = lhs.is_nan() & rhs.is_nan()
     return _eq_missing(expr, lhs, rhs) | both_nan
+
+
+def _different_enums(
+    left: DataType | DataTypeClass, right: DataType | DataTypeClass
+) -> bool:
+    return isinstance(left, pl.Enum) and isinstance(right, pl.Enum) and left != right
 
 
 def _enum_and_categorical(
