@@ -512,6 +512,34 @@ def test_condition_equal_columns_lists_only_inner() -> None:
     assert actual.to_list() == [True, False]
 
 
+def test_condition_equal_columns_two_lists_no_max_length() -> None:
+    lhs = pl.DataFrame(
+        {
+            "pk": [1, 2],
+            "a_left": [[1.0, 2.0], [3.0, 4.0]],
+        },
+    )
+    rhs = pl.DataFrame(
+        {
+            "pk": [1, 2],
+            "a_right": [[1.0, 2.0], [3.0, 4.0]],
+        },
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="max_list_length must be provided for List-vs-List comparisons",
+    ):
+        lhs.join(rhs, on="pk", maintain_order="left").select(
+            condition_equal_columns(
+                "a",
+                dtype_left=lhs.schema["a_left"],
+                dtype_right=rhs.schema["a_right"],
+                max_list_length=None,
+            )
+        ).to_series()
+
+
 @pytest.mark.parametrize(
     ("dtype_left", "dtype_right", "can_compare_dtypes"),
     [
