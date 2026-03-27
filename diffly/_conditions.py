@@ -3,6 +3,7 @@
 
 import datetime as dt
 from collections.abc import Mapping
+from typing import cast
 
 import polars as pl
 from polars.datatypes import DataType, DataTypeClass
@@ -206,12 +207,7 @@ def _compare_sequence_columns(
         n_elements = dtype_right.shape[0]
         has_same_length = col_left.list.len().eq(pl.lit(n_elements))
     else:  # pl.List vs pl.List
-        if max_list_length is None:
-            raise ValueError(
-                "max_list_length must be provided for List-vs-List comparisons "
-                "in _compare_sequence_columns()."
-            )
-        n_elements = max_list_length
+        n_elements = cast(int, max_list_length)
         has_same_length = col_left.list.len().eq_missing(col_right.list.len())
 
     if n_elements == 0:
