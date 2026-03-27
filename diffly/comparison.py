@@ -711,22 +711,30 @@ class DataFrameComparison:
 
     @cached_property
     def _max_list_lengths_by_column(self) -> dict[str, int]:
-        list_columns = [
-            col
-            for col in self._other_common_columns
-            if isinstance(self.left_schema[col], pl.List)
-            and isinstance(self.right_schema[col], pl.List)
-        ]
-        if not list_columns:
+        """Max list length across all nesting levels, for columns where either side
+        contains a List anywhere in its type tree."""
+        left_exprs: list[pl.Expr] = []
+        right_exprs: list[pl.Expr] = []
+        columns: list[str] = []
+
+        for col in self._other_common_columns:
+            col_left = _list_length_exprs(pl.col(col), self.left_schema[col])
+            col_right = _list_length_exprs(pl.col(col), self.right_schema[col])
+            if not col_left and not col_right:
+                continue
+            columns.append(col)
+            left_exprs.append(_max_or_zero(col_left).alias(col))
+            right_exprs.append(_max_or_zero(col_right).alias(col))
+
+        if not columns:
             return {}
 
-        exprs = [pl.col(col).list.len().max().alias(col) for col in list_columns]
         [left_max, right_max] = pl.collect_all(
-            [self.left.select(exprs), self.right.select(exprs)]
+            [self.left.select(left_exprs), self.right.select(right_exprs)]
         )
         return {
             col: max(int(left_max[col].item() or 0), int(right_max[col].item() or 0))
-            for col in list_columns
+            for col in columns
         }
 
     def _condition_equal_rows(self, columns: list[str]) -> pl.Expr:
@@ -833,3 +841,30 @@ class Schemas:
         """Columns that are only present in the right data frame, mapped to their data
         types."""
         return self.right() - self.left()
+
+
+def _list_length_exprs(
+    expr: pl.Expr, dtype: pl.DataType | pl.datatypes.DataTypeClass
+) -> list[pl.Expr]:
+    """Collect max-list-length scalar expressions for every List level in the type
+    tree."""
+    if isinstance(dtype, pl.List):
+        return [expr.list.len().max(), *_list_length_exprs(expr.explode(), dtype.inner)]
+    if isinstance(dtype, pl.Array):
+        return _list_length_exprs(expr.explode(), dtype.inner)
+    if isinstance(dtype, pl.Struct):
+        return [
+            e
+            for field in dtype.fields
+            for e in _list_length_exprs(expr.struct[field.name], field.dtype)
+        ]
+    return []
+
+
+def _max_or_zero(exprs: list[pl.Expr]) -> pl.Expr:
+    """Return the horizontal max of scalar expressions, or literal 0 if empty."""
+    if not exprs:
+        return pl.lit(0)
+    if len(exprs) == 1:
+        return exprs[0]
+    return pl.max_horizontal(exprs)

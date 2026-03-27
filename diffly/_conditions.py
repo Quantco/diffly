@@ -206,11 +206,7 @@ def _compare_sequence_columns(
         n_elements = dtype_right.shape[0]
         has_same_length = col_left.list.len().eq(pl.lit(n_elements))
     else:  # pl.List vs pl.List
-        if not isinstance(max_list_length, int):
-            # Fallback for nested list comparisons where no max_list_length is
-            # available: perform a direct equality comparison without element-wise
-            # unrolling.
-            return _eq_missing(col_left.eq_missing(col_right), col_left, col_right)
+        assert max_list_length is not None
         n_elements = max_list_length
         has_same_length = col_left.list.len().eq_missing(col_right.list.len())
 
@@ -232,7 +228,7 @@ def _compare_sequence_columns(
                 abs_tol=abs_tol,
                 rel_tol=rel_tol,
                 abs_tol_temporal=abs_tol_temporal,
-                max_list_length=None,
+                max_list_length=max_list_length,
             )
             for i in range(n_elements)
         ]
