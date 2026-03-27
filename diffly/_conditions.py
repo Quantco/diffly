@@ -140,16 +140,18 @@ def _compare_columns(
         elif isinstance(dtype_left, pl.List | pl.Array) and isinstance(
             dtype_right, pl.List | pl.Array
         ):
-            return _compare_sequence_columns(
-                col_left=col_left,
-                col_right=col_right,
-                dtype_left=dtype_left,
-                dtype_right=dtype_right,
-                max_list_length=max_list_length,
-                abs_tol=abs_tol,
-                rel_tol=rel_tol,
-                abs_tol_temporal=abs_tol_temporal,
-            )
+            if _needs_element_wise_comparison(dtype_left.inner, dtype_right.inner):
+                return _compare_sequence_columns(
+                    col_left=col_left,
+                    col_right=col_right,
+                    dtype_left=dtype_left,
+                    dtype_right=dtype_right,
+                    max_list_length=max_list_length,
+                    abs_tol=abs_tol,
+                    rel_tol=rel_tol,
+                    abs_tol_temporal=abs_tol_temporal,
+                )
+            return col_left.eq_missing(col_right)
 
     if (
         isinstance(dtype_left, pl.Enum)
@@ -237,6 +239,51 @@ def _compare_sequence_columns(
     return _eq_missing(has_same_length & elements_match, col_left, col_right)
 
 
+def _is_float_numeric_pair(
+    dtype_left: DataType | DataTypeClass,
+    dtype_right: DataType | DataTypeClass,
+) -> bool:
+    return (dtype_left.is_float() or dtype_right.is_float()) and (
+        dtype_left.is_numeric() and dtype_right.is_numeric()
+    )
+
+
+def _is_temporal_pair(
+    dtype_left: DataType | DataTypeClass,
+    dtype_right: DataType | DataTypeClass,
+) -> bool:
+    return dtype_left.is_temporal() and dtype_right.is_temporal()
+
+
+def _needs_element_wise_comparison(
+    dtype_left: DataType | DataTypeClass,
+    dtype_right: DataType | DataTypeClass,
+) -> bool:
+    """Check if two dtypes require element-wise comparison (tolerances or special
+    handling).
+
+    Returns False when eq_missing() on the whole column would produce identical results,
+    allowing us to skip the expensive element-wise iteration for list/array columns.
+    """
+    if _is_float_numeric_pair(dtype_left, dtype_right):
+        return True
+    if _is_temporal_pair(dtype_left, dtype_right):
+        return True
+    if isinstance(dtype_left, pl.Struct) and isinstance(dtype_right, pl.Struct):
+        fields_left = {f.name: f.dtype for f in dtype_left.fields}
+        fields_right = {f.name: f.dtype for f in dtype_right.fields}
+        return any(
+            _needs_element_wise_comparison(fields_left[name], fields_right[name])
+            for name in fields_left
+            if name in fields_right
+        )
+    if isinstance(dtype_left, pl.List | pl.Array) and isinstance(
+        dtype_right, pl.List | pl.Array
+    ):
+        return _needs_element_wise_comparison(dtype_left.inner, dtype_right.inner)
+    return False
+
+
 def _compare_primitive_columns(
     col_left: pl.Expr,
     col_right: pl.Expr,
@@ -246,13 +293,11 @@ def _compare_primitive_columns(
     rel_tol: float,
     abs_tol_temporal: dt.timedelta,
 ) -> pl.Expr:
-    if (dtype_left.is_float() or dtype_right.is_float()) and (
-        dtype_left.is_numeric() and dtype_right.is_numeric()
-    ):
+    if _is_float_numeric_pair(dtype_left, dtype_right):
         return col_left.is_close(col_right, abs_tol=abs_tol, rel_tol=rel_tol).pipe(
             _eq_missing_with_nan, lhs=col_left, rhs=col_right
         )
-    elif dtype_left.is_temporal() and dtype_right.is_temporal():
+    elif _is_temporal_pair(dtype_left, dtype_right):
         diff_less_than_tolerance = (col_left - col_right).abs() <= abs_tol_temporal
         return diff_less_than_tolerance.pipe(_eq_missing, lhs=col_left, rhs=col_right)
 

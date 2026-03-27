@@ -126,8 +126,8 @@ def test_eq_missing_not_slower_than_element_wise_for_list_columns() -> None:
     mean_time_cond = statistics.mean(times_cond[num_runs_warmup:])
 
     ratio = mean_time_cond / mean_time_eq
-    assert ratio > 2.0, (
-        f"Element-wise comparison was only {ratio:.1f}x slower than eq_missing "
+    assert ratio < 1.25, (
+        f"condition_equal_columns was {ratio:.1f}x slower than eq_missing "
         f"({mean_time_cond:.3f}s vs {mean_time_eq:.3f}s). "
-        f"Expected at least 2x slowdown to justify the optimization."
+        f"Expected comparable performance since list<i64> should use eq_missing directly."
     )
