@@ -24,9 +24,7 @@ def test_condition_equal_columns_struct() -> None:
             "a": [{"y": 2.0, "x": 1.1}, {"y": 2.7, "x": 2.1}],
         }
     )
-
     c = compare_frames(lhs, rhs, primary_key="pk", abs_tol=0.5, rel_tol=0)
-    assert c._max_list_lengths_by_column == {}
 
     # Act
     lhs = lhs.rename({"a": "a_left"})
@@ -38,7 +36,7 @@ def test_condition_equal_columns_struct() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
-                max_list_length=None,
+                max_list_length=c._max_list_lengths_by_column.get("a"),
                 abs_tol=c.abs_tol_by_column["a"],
                 rel_tol=c.rel_tol_by_column["a"],
             )
@@ -47,6 +45,7 @@ def test_condition_equal_columns_struct() -> None:
     )
 
     # Assert
+    assert c._max_list_lengths_by_column == {}
     assert actual.to_list() == [True, False]
 
 
@@ -55,17 +54,20 @@ def test_condition_equal_columns_different_struct_fields() -> None:
     lhs = pl.DataFrame(
         {
             "pk": [1, 2],
-            "a_left": [{"x": 1.0, "z": 2.0}, {"x": 2.0, "z": 2.1}],
+            "a": [{"x": 1.0, "z": 2.0}, {"x": 2.0, "z": 2.1}],
         }
     )
     rhs = pl.DataFrame(
         {
             "pk": [1, 2],
-            "a_right": [{"y": 2.0, "x": 1.1}, {"y": 2.7, "x": 2.1}],
+            "a": [{"y": 2.0, "x": 1.1}, {"y": 2.7, "x": 2.1}],
         }
     )
+    c = compare_frames(lhs, rhs, primary_key="pk")
 
     # Act
+    lhs = lhs.rename({"a": "a_left"})
+    rhs = rhs.rename({"a": "a_right"})
     actual = (
         lhs.join(rhs, on="pk", maintain_order="left")
         .select(
@@ -73,13 +75,16 @@ def test_condition_equal_columns_different_struct_fields() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
-                max_list_length=None,
+                max_list_length=c._max_list_lengths_by_column.get("a"),
+                abs_tol=c.abs_tol_by_column["a"],
+                rel_tol=c.rel_tol_by_column["a"],
             )
         )
         .to_series()
     )
 
     # Assert
+    assert c._max_list_lengths_by_column == {}
     assert actual.to_list() == [False, False]
 
 
@@ -94,25 +99,18 @@ def test_condition_equal_columns_list_array_with_tolerance(
 ) -> None:
     # Arrange
     lhs = pl.DataFrame(
-        {
-            "pk": [1, 2, 3],
-            "a_left": [[1.0, 1.1], [2.0, 2.1], [3.0, 3.0]],
-        },
-        schema={"pk": pl.Int64, "a_left": lhs_type},
+        {"pk": [1, 2, 3], "a": [[1.0, 1.1], [2.0, 2.1], [3.0, 3.0]]},
+        schema={"pk": pl.Int64, "a": lhs_type},
     )
     rhs = pl.DataFrame(
-        {
-            "pk": [1, 2, 3],
-            "a_right": [[1.0, 1.1], [2.0, 2.2], [3.0, 3.7]],
-        },
-        schema={"pk": pl.Int64, "a_right": rhs_type},
+        {"pk": [1, 2, 3], "a": [[1.0, 1.1], [2.0, 2.2], [3.0, 3.7]]},
+        schema={"pk": pl.Int64, "a": rhs_type},
     )
-
-    max_list_length: int | None = None
-    if isinstance(lhs_type, pl.List) and isinstance(rhs_type, pl.List):
-        max_list_length = 2
+    c = compare_frames(lhs, rhs, primary_key="pk", abs_tol=0.5, rel_tol=0)
 
     # Act
+    lhs = lhs.rename({"a": "a_left"})
+    rhs = rhs.rename({"a": "a_right"})
     actual = (
         lhs.join(rhs, on="pk", maintain_order="left")
         .select(
@@ -120,14 +118,19 @@ def test_condition_equal_columns_list_array_with_tolerance(
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
-                abs_tol=0.5,
-                rel_tol=0,
-                max_list_length=max_list_length,
+                max_list_length=c._max_list_lengths_by_column.get("a"),
+                abs_tol=c.abs_tol_by_column["a"],
+                rel_tol=c.rel_tol_by_column["a"],
             )
         )
         .to_series()
     )
 
+    # Assert
+    if isinstance(lhs_type, pl.List) and isinstance(rhs_type, pl.List):
+        assert c._max_list_lengths_by_column == {"a": 2}
+    else:
+        assert c._max_list_lengths_by_column == {}
     assert actual.to_list() == [True, True, False]
 
 
@@ -146,31 +149,30 @@ def test_condition_equal_columns_nested_list_array_with_tolerance(
     lhs = pl.DataFrame(
         {
             "pk": [1, 2, 3],
-            "a_left": [
+            "a": [
                 [[1.0, 1.1, 1.3], [2.0, 2.1, 2.2]],
                 [[3.0, 3.0, 3.1], [4.0, 4.0, 4.1]],
                 [[5.0, 5.0, 5.1], [6.0, 6.0, 6.1]],
             ],
         },
-        schema={"pk": pl.Int64, "a_left": lhs_type},
+        schema={"pk": pl.Int64, "a": lhs_type},
     )
     rhs = pl.DataFrame(
         {
             "pk": [1, 2, 3],
-            "a_right": [
+            "a": [
                 [[1.0, 1.1, 1.3], [2.0, 2.1, 2.2]],
                 [[3.0, 3.0, 3.1], [4.0, 4.4, 4.1]],
                 [[5.0, 5.0, 5.1], [6.0, 6.8, 6.1]],
             ],
         },
-        schema={"pk": pl.Int64, "a_right": rhs_type},
+        schema={"pk": pl.Int64, "a": rhs_type},
     )
-
-    max_list_length: int | None = None
-    if isinstance(lhs_type, pl.List) and isinstance(rhs_type, pl.List):
-        max_list_length = 3
+    c = compare_frames(lhs, rhs, primary_key="pk", abs_tol=0.5, rel_tol=0)
 
     # Act
+    lhs = lhs.rename({"a": "a_left"})
+    rhs = rhs.rename({"a": "a_right"})
     actual = (
         lhs.join(rhs, on="pk", maintain_order="left")
         .select(
@@ -178,33 +180,31 @@ def test_condition_equal_columns_nested_list_array_with_tolerance(
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
-                abs_tol=0.5,
-                rel_tol=0,
-                max_list_length=max_list_length,
+                max_list_length=c._max_list_lengths_by_column.get("a"),
+                abs_tol=c.abs_tol_by_column["a"],
+                rel_tol=c.rel_tol_by_column["a"],
             )
         )
         .to_series()
     )
 
+    # Assert
+    if isinstance(lhs_type, pl.List) and isinstance(rhs_type, pl.List):
+        assert c._max_list_lengths_by_column == {"a": 3}
+    else:
+        assert c._max_list_lengths_by_column == {}
     assert actual.to_list() == [True, True, False]
 
 
 def test_condition_equal_columns_nested_dtype_mismatch() -> None:
     # Arrange
-    lhs = pl.DataFrame(
-        {
-            "pk": [1, 2],
-            "a_left": [{"x": 1}, {"x": 2}],
-        },
-    )
-    rhs = pl.DataFrame(
-        {
-            "pk": [1, 2],
-            "a_right": [[1.0, 1.1], [2.0, 2.2]],
-        },
-    )
+    lhs = pl.DataFrame({"pk": [1, 2], "a": [{"x": 1}, {"x": 2}]})
+    rhs = pl.DataFrame({"pk": [1, 2], "a": [[1.0, 1.1], [2.0, 2.2]]})
+    c = compare_frames(lhs, rhs, primary_key="pk")
 
     # Act
+    lhs = lhs.rename({"a": "a_left"})
+    rhs = rhs.rename({"a": "a_right"})
     actual = (
         lhs.join(rhs, on="pk", maintain_order="left")
         .select(
@@ -212,32 +212,28 @@ def test_condition_equal_columns_nested_dtype_mismatch() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
-                max_list_length=2,
+                max_list_length=c._max_list_lengths_by_column.get("a"),
+                abs_tol=c.abs_tol_by_column["a"],
+                rel_tol=c.rel_tol_by_column["a"],
             )
         )
         .to_series()
     )
 
     # Assert
+    assert c._max_list_lengths_by_column == {}
     assert actual.to_list() == [False, False]
 
 
 def test_condition_equal_columns_exactly_one_nested() -> None:
     # Arrange
-    lhs = pl.DataFrame(
-        {
-            "pk": [1, 2],
-            "a_left": [{"x": 1}, {"x": 2}],
-        },
-    )
-    rhs = pl.DataFrame(
-        {
-            "pk": [1, 2],
-            "a_right": [1, 2],
-        },
-    )
+    lhs = pl.DataFrame({"pk": [1, 2], "a": [{"x": 1}, {"x": 2}]})
+    rhs = pl.DataFrame({"pk": [1, 2], "a": [1, 2]})
+    c = compare_frames(lhs, rhs, primary_key="pk")
 
     # Act
+    lhs = lhs.rename({"a": "a_left"})
+    rhs = rhs.rename({"a": "a_right"})
     actual = (
         lhs.join(rhs, on="pk", maintain_order="left")
         .select(
@@ -245,13 +241,16 @@ def test_condition_equal_columns_exactly_one_nested() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
-                max_list_length=None,
+                max_list_length=c._max_list_lengths_by_column.get("a"),
+                abs_tol=c.abs_tol_by_column["a"],
+                rel_tol=c.rel_tol_by_column["a"],
             )
         )
         .to_series()
     )
 
     # Assert
+    assert c._max_list_lengths_by_column == {}
     assert actual.to_list() == [False, False]
 
 
@@ -260,7 +259,7 @@ def test_condition_equal_columns_temporal_tolerance() -> None:
     lhs = pl.DataFrame(
         {
             "pk": [1, 2, 3, 4],
-            "a_left": [
+            "a": [
                 dt.datetime(2025, 1, 1, 9, 0, 0),
                 dt.datetime(2025, 1, 1, 10, 0, 0),
                 None,
@@ -271,7 +270,7 @@ def test_condition_equal_columns_temporal_tolerance() -> None:
     rhs = pl.DataFrame(
         {
             "pk": [1, 2, 3, 4],
-            "a_right": [
+            "a": [
                 dt.datetime(2025, 1, 1, 9, 0, 1),
                 dt.datetime(2025, 1, 1, 10, 0, 5),
                 dt.datetime(2025, 1, 1, 10, 0, 0),
@@ -279,8 +278,13 @@ def test_condition_equal_columns_temporal_tolerance() -> None:
             ],
         },
     )
+    c = compare_frames(
+        lhs, rhs, primary_key="pk", abs_tol_temporal=dt.timedelta(seconds=2)
+    )
 
     # Act
+    lhs = lhs.rename({"a": "a_left"})
+    rhs = rhs.rename({"a": "a_right"})
     actual = (
         lhs.join(rhs, on="pk", maintain_order="left")
         .select(
@@ -288,31 +292,36 @@ def test_condition_equal_columns_temporal_tolerance() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
-                max_list_length=None,
-                abs_tol_temporal=dt.timedelta(seconds=2),
+                max_list_length=c._max_list_lengths_by_column.get("a"),
+                abs_tol=c.abs_tol_by_column["a"],
+                rel_tol=c.rel_tol_by_column["a"],
+                abs_tol_temporal=c.abs_tol_temporal_by_column["a"],
             )
         )
         .to_series()
     )
 
     # Assert
+    assert c._max_list_lengths_by_column == {}
     assert actual.to_list() == [True, False, False, True]
 
 
 def test_condition_equal_columns_two_lists() -> None:
+    # Arrange
     lhs = pl.DataFrame(
-        {
-            "pk": [1, 2, 3, 4, 5],
-            "a_left": [[1.0, 2.0], [3.0], [5.0, None], None, None],
-        },
+        {"pk": [1, 2, 3, 4, 5], "a": [[1.0, 2.0], [3.0], [5.0, None], None, None]},
     )
     rhs = pl.DataFrame(
         {
             "pk": [1, 2, 3, 4, 5],
-            "a_right": [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0], None],
+            "a": [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0], None],
         },
     )
+    c = compare_frames(lhs, rhs, primary_key="pk", abs_tol=0.5, rel_tol=0)
 
+    # Act
+    lhs = lhs.rename({"a": "a_left"})
+    rhs = rhs.rename({"a": "a_right"})
     actual = (
         lhs.join(rhs, on="pk", maintain_order="left")
         .select(
@@ -320,31 +329,31 @@ def test_condition_equal_columns_two_lists() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
-                abs_tol=0.5,
-                rel_tol=0,
-                max_list_length=2,
+                max_list_length=c._max_list_lengths_by_column.get("a"),
+                abs_tol=c.abs_tol_by_column["a"],
+                rel_tol=c.rel_tol_by_column["a"],
             )
         )
         .to_series()
     )
+
+    # Assert
+    assert c._max_list_lengths_by_column == {"a": 2}
     assert actual.to_list() == [True, False, False, False, True]
 
 
 def test_condition_equal_columns_array_vs_list_length_mismatch() -> None:
+    # Arrange
     lhs = pl.DataFrame(
-        {
-            "pk": [1, 2],
-            "a_left": [[1.0, 2.0], [3.0, 4.0]],
-        },
-        schema={"pk": pl.Int64, "a_left": pl.Array(pl.Float64, shape=2)},
+        {"pk": [1, 2], "a": [[1.0, 2.0], [3.0, 4.0]]},
+        schema={"pk": pl.Int64, "a": pl.Array(pl.Float64, shape=2)},
     )
-    rhs = pl.DataFrame(
-        {
-            "pk": [1, 2],
-            "a_right": [[1.0, 2.0], [3.0]],
-        },
-    )
+    rhs = pl.DataFrame({"pk": [1, 2], "a": [[1.0, 2.0], [3.0]]})
+    c = compare_frames(lhs, rhs, primary_key="pk", abs_tol=0.5, rel_tol=0)
 
+    # Act
+    lhs = lhs.rename({"a": "a_left"})
+    rhs = rhs.rename({"a": "a_right"})
     actual = (
         lhs.join(rhs, on="pk", maintain_order="left")
         .select(
@@ -352,32 +361,34 @@ def test_condition_equal_columns_array_vs_list_length_mismatch() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
-                max_list_length=2,
-                abs_tol=0.5,
-                rel_tol=0,
+                max_list_length=c._max_list_lengths_by_column.get("a"),
+                abs_tol=c.abs_tol_by_column["a"],
+                rel_tol=c.rel_tol_by_column["a"],
             )
         )
         .to_series()
     )
+
+    # Assert
+    assert c._max_list_lengths_by_column == {}
     assert actual.to_list() == [True, False]
 
 
 def test_condition_equal_columns_two_arrays_different_shapes() -> None:
+    # Arrange
     lhs = pl.DataFrame(
-        {
-            "pk": [1],
-            "a_left": [[1.0, 2.0]],
-        },
-        schema={"pk": pl.Int64, "a_left": pl.Array(pl.Float64, shape=2)},
+        {"pk": [1], "a": [[1.0, 2.0]]},
+        schema={"pk": pl.Int64, "a": pl.Array(pl.Float64, shape=2)},
     )
     rhs = pl.DataFrame(
-        {
-            "pk": [1],
-            "a_right": [[1.0, 2.0, 3.0]],
-        },
-        schema={"pk": pl.Int64, "a_right": pl.Array(pl.Float64, shape=3)},
+        {"pk": [1], "a": [[1.0, 2.0, 3.0]]},
+        schema={"pk": pl.Int64, "a": pl.Array(pl.Float64, shape=3)},
     )
+    c = compare_frames(lhs, rhs, primary_key="pk")
 
+    # Act
+    lhs = lhs.rename({"a": "a_left"})
+    rhs = rhs.rename({"a": "a_right"})
     actual = (
         lhs.join(rhs, on="pk", maintain_order="left")
         .select(
@@ -385,11 +396,16 @@ def test_condition_equal_columns_two_arrays_different_shapes() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
-                max_list_length=None,
+                max_list_length=c._max_list_lengths_by_column.get("a"),
+                abs_tol=c.abs_tol_by_column["a"],
+                rel_tol=c.rel_tol_by_column["a"],
             )
         )
         .to_series()
     )
+
+    # Assert
+    assert c._max_list_lengths_by_column == {}
     assert actual.to_list() == [False]
 
 
@@ -402,25 +418,20 @@ def test_condition_equal_columns_two_arrays_different_shapes() -> None:
 def test_condition_equal_columns_empty_list_array(
     lhs_type: pl.DataType, rhs_type: pl.DataType
 ) -> None:
+    # Arrange
     lhs = pl.DataFrame(
-        {
-            "pk": [1, 2],
-            "a_left": [[], None],
-        },
-        schema={"pk": pl.Int64, "a_left": lhs_type},
+        {"pk": [1, 2], "a": [[], None]},
+        schema={"pk": pl.Int64, "a": lhs_type},
     )
     rhs = pl.DataFrame(
-        {
-            "pk": [1, 2],
-            "a_right": [[], None],
-        },
-        schema={"pk": pl.Int64, "a_right": rhs_type},
+        {"pk": [1, 2], "a": [[], None]},
+        schema={"pk": pl.Int64, "a": rhs_type},
     )
+    c = compare_frames(lhs, rhs, primary_key="pk")
 
-    max_list_length: int | None = None
-    if isinstance(lhs_type, pl.List) or isinstance(rhs_type, pl.List):
-        max_list_length = 0
-
+    # Act
+    lhs = lhs.rename({"a": "a_left"})
+    rhs = rhs.rename({"a": "a_right"})
     actual = (
         lhs.join(rhs, on="pk", maintain_order="left")
         .select(
@@ -428,11 +439,19 @@ def test_condition_equal_columns_empty_list_array(
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
-                max_list_length=max_list_length,
+                max_list_length=c._max_list_lengths_by_column.get("a"),
+                abs_tol=c.abs_tol_by_column["a"],
+                rel_tol=c.rel_tol_by_column["a"],
             )
         )
         .to_series()
     )
+
+    # Assert
+    if isinstance(lhs_type, pl.List) and isinstance(rhs_type, pl.List):
+        assert c._max_list_lengths_by_column == {"a": 0}
+    else:
+        assert c._max_list_lengths_by_column == {}
     assert actual.to_list() == [True, True]
 
 
@@ -441,17 +460,26 @@ def test_condition_equal_columns_lists_only_inner() -> None:
     lhs = pl.DataFrame(
         {
             "pk": [1, 2],
-            "a_left": [{"x": 1, "y": [1.0, 2.0, 3.0]}, {"x": 2, "y": [4.0, 5.0, 6.0]}],
+            "a": [
+                {"x": 1, "y": [1.0, 2.0, 3.0]},
+                {"x": 2, "y": [4.0, 5.0, 6.0]},
+            ],
         },
     )
     rhs = pl.DataFrame(
         {
             "pk": [1, 2],
-            "a_right": [{"x": 1, "y": [1.0, 2.1, 3.0]}, {"x": 2, "y": [4.0, 5.3, 6.0]}],
+            "a": [
+                {"x": 1, "y": [1.0, 2.1, 3.0]},
+                {"x": 2, "y": [4.0, 5.3, 6.0]},
+            ],
         },
     )
+    c = compare_frames(lhs, rhs, primary_key="pk", abs_tol=0.2, rel_tol=0)
 
     # Act
+    lhs = lhs.rename({"a": "a_left"})
+    rhs = rhs.rename({"a": "a_right"})
     actual = (
         lhs.join(rhs, on="pk", maintain_order="left")
         .select(
@@ -459,14 +487,16 @@ def test_condition_equal_columns_lists_only_inner() -> None:
                 "a",
                 dtype_left=lhs.schema["a_left"],
                 dtype_right=rhs.schema["a_right"],
-                max_list_length=3,
-                abs_tol=0.2,
+                max_list_length=c._max_list_lengths_by_column.get("a"),
+                abs_tol=c.abs_tol_by_column["a"],
+                rel_tol=c.rel_tol_by_column["a"],
             )
         )
         .to_series()
     )
 
     # Assert
+    assert c._max_list_lengths_by_column == {"a": 3}
     assert actual.to_list() == [True, False]
 
 
