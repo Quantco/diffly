@@ -83,10 +83,10 @@ def test_summary_lazyframe_not_slower_than_dataframe() -> None:
     )
 
 
-def test_eq_missing_not_slower_than_element_wise_for_list_columns() -> None:
-    """Ensure that comparing list columns with non-tolerance inner types via
-    eq_missing() is not slower than the element-wise _compare_sequence_columns()
-    path."""
+def test_element_wise_comparison_slower_than_eq_missing_for_list_columns() -> None:
+    """Confirm that comparing list columns with non-tolerance inner types via
+    eq_missing() is significantly faster than the element-wise
+    _compare_sequence_columns() path."""
     n_rows = 500_000
     list_len = 20
     num_runs_measured = 10
@@ -94,12 +94,13 @@ def test_eq_missing_not_slower_than_element_wise_for_list_columns() -> None:
 
     col_left = f"val_{Side.LEFT}"
     col_right = f"val_{Side.RIGHT}"
-    df = pl.DataFrame(
+    base_list = list(range(list_len))
+    df = pl.LazyFrame(
         {
-            col_left: [list(range(list_len)) for _ in range(n_rows)],
-            col_right: [list(range(list_len)) for _ in range(n_rows)],
+            col_left: pl.repeat(pl.lit(base_list), n_rows),
+            col_right: pl.repeat(pl.lit(base_list), n_rows),
         }
-    )
+    ).collect()
 
     times_eq = []
     times_cond = []
