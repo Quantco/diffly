@@ -723,8 +723,8 @@ class DataFrameComparison:
             if not (col_left and col_right):
                 continue
             columns.append(col)
-            left_exprs.append(_max_or_zero(col_left).alias(col))
-            right_exprs.append(_max_or_zero(col_right).alias(col))
+            left_exprs.append(pl.max_horizontal(col_left).alias(col))
+            right_exprs.append(pl.max_horizontal(col_right).alias(col))
 
         if not columns:
             return {}
@@ -859,12 +859,3 @@ def _list_length_exprs(
             for e in _list_length_exprs(expr.struct[field.name], field.dtype)
         ]
     return []
-
-
-def _max_or_zero(exprs: list[pl.Expr]) -> pl.Expr:
-    """Return the horizontal max of scalar expressions, or literal 0 if empty."""
-    if not exprs:
-        return pl.lit(0)
-    if len(exprs) == 1:
-        return exprs[0]
-    return pl.max_horizontal(exprs)
