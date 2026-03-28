@@ -577,3 +577,73 @@ def test_can_compare_dtypes(
         dtype_left=dtype_left, dtype_right=dtype_right
     )
     assert can_compare_dtypes_actual == can_compare_dtypes
+
+
+@pytest.mark.parametrize(
+    ("dtype_left", "dtype_right", "expected"),
+    [
+        # Primitives that don't need element-wise comparison
+        (pl.Int64, pl.Int64, False),
+        (pl.String, pl.String, False),
+        (pl.Boolean, pl.Boolean, False),
+        # Float/numeric pairs
+        (pl.Float64, pl.Float64, True),
+        (pl.Int64, pl.Float64, True),
+        (pl.Float32, pl.Int32, True),
+        # Temporal pairs
+        (pl.Datetime, pl.Datetime, True),
+        (pl.Date, pl.Date, True),
+        (pl.Datetime, pl.Date, True),
+        # Enum/categorical
+        (pl.Enum(["a", "b"]), pl.Enum(["a", "b"]), False),
+        (pl.Enum(["a", "b"]), pl.Enum(["a", "b", "c"]), True),
+        (pl.Enum(["a"]), pl.Categorical(), True),
+        (pl.Categorical(), pl.Enum(["a"]), True),
+        # Struct with no tolerance-requiring fields
+        (
+            pl.Struct({"x": pl.Int64, "y": pl.String}),
+            pl.Struct({"x": pl.Int64, "y": pl.String}),
+            False,
+        ),
+        # Struct with a float field
+        (
+            pl.Struct({"x": pl.Int64, "y": pl.Float64}),
+            pl.Struct({"x": pl.Int64, "y": pl.Float64}),
+            True,
+        ),
+        # Struct with different-category enums
+        (
+            pl.Struct({"x": pl.Enum(["a"])}),
+            pl.Struct({"x": pl.Enum(["b"])}),
+            True,
+        ),
+        # List/Array with non-tolerance inner type
+        (pl.List(pl.Int64), pl.List(pl.Int64), False),
+        (pl.Array(pl.String, shape=3), pl.Array(pl.String, shape=3), False),
+        # List/Array with tolerance-requiring inner type
+        (pl.List(pl.Float64), pl.List(pl.Float64), True),
+        (pl.Array(pl.Datetime, shape=2), pl.Array(pl.Datetime, shape=2), True),
+        # Nested: list of structs with a float field
+        (
+            pl.List(pl.Struct({"x": pl.Float64})),
+            pl.List(pl.Struct({"x": pl.Float64})),
+            True,
+        ),
+        # Nested: list of structs without tolerance-requiring fields
+        (
+            pl.List(pl.Struct({"x": pl.Int64})),
+            pl.List(pl.Struct({"x": pl.Int64})),
+            False,
+        ),
+        # Deeply nested: struct with a list of structs with a float field
+        (
+            pl.List(pl.Struct({"x": pl.String, "y": pl.List(pl.Float64)})),
+            pl.List(pl.Struct({"x": pl.String, "y": pl.List(pl.Float64)})),
+            True,
+        ),
+    ],
+)
+def test_needs_element_wise_comparison(
+    dtype_left: pl.DataType, dtype_right: pl.DataType, expected: bool
+) -> None:
+    assert _needs_element_wise_comparison(dtype_left, dtype_right) == expected
