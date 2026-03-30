@@ -6,7 +6,11 @@ import datetime as dt
 import polars as pl
 import pytest
 
-from diffly._conditions import _can_compare_dtypes, condition_equal_columns
+from diffly._conditions import (
+    _can_compare_dtypes,
+    _needs_element_wise_comparison,
+    condition_equal_columns,
+)
 from diffly.comparison import compare_frames
 
 
@@ -512,6 +516,45 @@ def test_condition_equal_columns_lists_only_inner() -> None:
     assert actual.to_list() == [True, False]
 
 
+def test_condition_equal_columns_list_of_different_enums() -> None:
+    # Arrange
+    first_enum = pl.Enum(["one", "two"])
+    second_enum = pl.Enum(["one", "two", "three"])
+
+    lhs = pl.DataFrame(
+        {"pk": [1, 2], "a": [["one", "two"], ["one", "one"]]},
+        schema_overrides={"a": pl.List(first_enum)},
+    )
+    rhs = pl.DataFrame(
+        {"pk": [1, 2], "a": [["one", "two"], ["one", "three"]]},
+        schema_overrides={"a": pl.List(second_enum)},
+    )
+    c = compare_frames(lhs, rhs, primary_key="pk")
+
+    # Act
+    lhs = lhs.rename({"a": "a_left"})
+    rhs = rhs.rename({"a": "a_right"})
+    actual = (
+        lhs.join(rhs, on="pk", maintain_order="left")
+        .select(
+            condition_equal_columns(
+                "a",
+                dtype_left=lhs.schema["a_left"],
+                dtype_right=rhs.schema["a_right"],
+                max_list_length=c._max_list_lengths_by_column.get("a"),
+                abs_tol=c.abs_tol_by_column["a"],
+                rel_tol=c.rel_tol_by_column["a"],
+            )
+        )
+        .to_series()
+    )
+
+    # Assert
+    assert c._max_list_lengths_by_column == {"a": 2}
+    assert _needs_element_wise_comparison(first_enum, second_enum)
+    assert actual.to_list() == [True, False]
+
+
 @pytest.mark.parametrize(
     ("dtype_left", "dtype_right", "can_compare_dtypes"),
     [
@@ -534,3 +577,73 @@ def test_can_compare_dtypes(
         dtype_left=dtype_left, dtype_right=dtype_right
     )
     assert can_compare_dtypes_actual == can_compare_dtypes
+
+
+@pytest.mark.parametrize(
+    ("dtype_left", "dtype_right", "expected"),
+    [
+        # Primitives that don't need element-wise comparison
+        (pl.Int64, pl.Int64, False),
+        (pl.String, pl.String, False),
+        (pl.Boolean, pl.Boolean, False),
+        # Float/numeric pairs
+        (pl.Float64, pl.Float64, True),
+        (pl.Int64, pl.Float64, True),
+        (pl.Float32, pl.Int32, True),
+        # Temporal pairs
+        (pl.Datetime, pl.Datetime, True),
+        (pl.Date, pl.Date, True),
+        (pl.Datetime, pl.Date, True),
+        # Enum/categorical
+        (pl.Enum(["a", "b"]), pl.Enum(["a", "b"]), False),
+        (pl.Enum(["a", "b"]), pl.Enum(["a", "b", "c"]), True),
+        (pl.Enum(["a"]), pl.Categorical(), True),
+        (pl.Categorical(), pl.Enum(["a"]), True),
+        # Struct with no tolerance-requiring fields
+        (
+            pl.Struct({"x": pl.Int64, "y": pl.String}),
+            pl.Struct({"x": pl.Int64, "y": pl.String}),
+            False,
+        ),
+        # Struct with a float field
+        (
+            pl.Struct({"x": pl.Int64, "y": pl.Float64}),
+            pl.Struct({"x": pl.Int64, "y": pl.Float64}),
+            True,
+        ),
+        # Struct with different-category enums
+        (
+            pl.Struct({"x": pl.Enum(["a"])}),
+            pl.Struct({"x": pl.Enum(["b"])}),
+            True,
+        ),
+        # List/Array with non-tolerance inner type
+        (pl.List(pl.Int64), pl.List(pl.Int64), False),
+        (pl.Array(pl.String, shape=3), pl.Array(pl.String, shape=3), False),
+        # List/Array with tolerance-requiring inner type
+        (pl.List(pl.Float64), pl.List(pl.Float64), True),
+        (pl.Array(pl.Datetime, shape=2), pl.Array(pl.Datetime, shape=2), True),
+        # Nested: list of structs with a float field
+        (
+            pl.List(pl.Struct({"x": pl.Float64})),
+            pl.List(pl.Struct({"x": pl.Float64})),
+            True,
+        ),
+        # Nested: list of structs without tolerance-requiring fields
+        (
+            pl.List(pl.Struct({"x": pl.Int64})),
+            pl.List(pl.Struct({"x": pl.Int64})),
+            False,
+        ),
+        # Deeply nested: struct with a list of structs with a float field
+        (
+            pl.List(pl.Struct({"x": pl.String, "y": pl.List(pl.Float64)})),
+            pl.List(pl.Struct({"x": pl.String, "y": pl.List(pl.Float64)})),
+            True,
+        ),
+    ],
+)
+def test_needs_element_wise_comparison(
+    dtype_left: pl.DataType, dtype_right: pl.DataType, expected: bool
+) -> None:
+    assert _needs_element_wise_comparison(dtype_left, dtype_right) == expected
