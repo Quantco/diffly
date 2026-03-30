@@ -263,12 +263,11 @@ def _needs_element_wise_comparison(
     Returns False when eq_missing() on the whole column would produce identical results,
     allowing us to skip the expensive element-wise iteration for list/array columns.
     """
-    if _is_float_numeric_pair(dtype_left, dtype_right):
-        return True
-    if _is_temporal_pair(dtype_left, dtype_right):
-        return True
-    if _different_enums(dtype_left, dtype_right) or _enum_and_categorical(
-        dtype_left, dtype_right
+    if (
+        _is_float_numeric_pair(dtype_left, dtype_right)
+        or _is_temporal_pair(dtype_left, dtype_right)
+        or _different_enums(dtype_left, dtype_right)
+        or _enum_and_categorical(dtype_left, dtype_right)
     ):
         return True
     if isinstance(dtype_left, pl.Struct) and isinstance(dtype_right, pl.Struct):
