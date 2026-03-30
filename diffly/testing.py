@@ -85,6 +85,13 @@ def assert_collection_equal(
 
     Raises:
         AssertionError: If the collections are not equal.
+
+    Examples:
+        >>> import dataframely as dy
+        >>> from diffly.testing import assert_collection_equal
+        >>> collection_left = ...  # a dataframely collection  # doctest: +SKIP
+        >>> collection_right = ...  # doctest: +SKIP
+        >>> assert_collection_equal(collection_left, collection_right)  # doctest: +SKIP
     """
     __tracebackhide__ = True
 
@@ -218,6 +225,22 @@ def assert_frame_equal(
         Contrary to :meth:`polars.testing.assert_frame_equal`, the data frames ``left``
         and ``right`` may both be either eager or lazy. They are not required to be the
         same for determining equivalence.
+
+    Examples:
+        >>> import polars as pl
+        >>> from diffly.testing import assert_frame_equal
+        >>> left = pl.DataFrame({"id": [1, 2], "value": [10.0, 20.0]})
+        >>> right = pl.DataFrame({"id": [1, 2], "value": [10.0, 20.0]})
+        >>> assert_frame_equal(left, right, primary_key="id")
+
+        When the data frames differ, an ``AssertionError`` is raised with a detailed
+        summary:
+
+        >>> right_diff = pl.DataFrame({"id": [1, 2], "value": [10.0, 25.0]})
+        >>> assert_frame_equal(left, right_diff, primary_key="id")  # doctest: +SKIP
+        Traceback (most recent call last):
+            ...
+        AssertionError: Data frames are not equal: ...
     """
     __tracebackhide__ = True
 

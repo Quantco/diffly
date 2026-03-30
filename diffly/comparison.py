@@ -69,6 +69,15 @@ def compare_frames(
     Note:
         The implementation of floating point equivalence mirrors the implementation of
         :meth:`math.isclose`.
+
+    Examples:
+        >>> import polars as pl
+        >>> from diffly import compare_frames
+        >>> left = pl.DataFrame({"id": [1, 2, 3], "value": [10.0, 20.0, 30.0]})
+        >>> right = pl.DataFrame({"id": [1, 2, 3], "value": [10.0, 25.0, 30.0]})
+        >>> comparison = compare_frames(left, right, primary_key="id")
+        >>> comparison.equal()
+        False
     """
     return DataFrameComparison._init_with_validation(
         left,
@@ -200,17 +209,53 @@ class DataFrameComparison:
 
     @cached_property
     def schemas(self) -> Schemas:
-        """Obtain information about the schemas of each data frame."""
+        """Obtain information about the schemas of each data frame.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1, 2], "name": ["a", "b"], "value": [10.0, 20.0]})
+            >>> right = pl.DataFrame({"id": [1, 2], "name": ["a", "b"], "score": [100, 200]})
+            >>> comparison = compare_frames(left, right, primary_key="id")
+            >>> comparison.schemas.left()
+            {'id': Int64, 'name': String, 'value': Float64}
+            >>> comparison.schemas.in_common()
+            {'id': (Int64, Int64), 'name': (String, String)}
+            >>> comparison.schemas.left_only()
+            {'value': Float64}
+            >>> comparison.schemas.right_only()
+            {'score': Int64}
+        """
         return Schemas(self.left_schema, self.right_schema)
 
     @cached_method
     def num_rows_left(self) -> int:
-        """Number of rows in the left data frame."""
+        """Number of rows in the left data frame.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1, 2, 3], "value": [10.0, 20.0, 30.0]})
+            >>> right = pl.DataFrame({"id": [1, 2], "value": [10.0, 25.0]})
+            >>> comparison = compare_frames(left, right, primary_key="id")
+            >>> comparison.num_rows_left()
+            3
+        """
         return lazy_len(self.left)
 
     @cached_method
     def num_rows_right(self) -> int:
-        """Number of rows in the right data frame."""
+        """Number of rows in the right data frame.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1, 2, 3], "value": [10.0, 20.0, 30.0]})
+            >>> right = pl.DataFrame({"id": [1, 2], "value": [10.0, 25.0]})
+            >>> comparison = compare_frames(left, right, primary_key="id")
+            >>> comparison.num_rows_right()
+            2
+        """
         return lazy_len(self.right)
 
     @overload
@@ -232,6 +277,24 @@ class DataFrameComparison:
 
         Columns which are not used for joining have a suffix ``_left`` for the left data
         frame and a suffix ``_right`` for the right data frame.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1, 2, 3, 4], "status": ["a", "b", "c", "a"], "value": [10.0, 20.0, 30.0, 40.0]})
+            >>> right = pl.DataFrame({"id": [1, 2, 3, 5], "status": ["a", "x", "x", "a"], "value": [10.0, 25.0, 30.0, 50.0]})
+            >>> comparison = compare_frames(left, right, primary_key="id")
+            >>> comparison.joined()
+            shape: (3, 5)
+            ┌─────┬─────────────┬──────────────┬────────────┬─────────────┐
+            │ id  ┆ status_left ┆ status_right ┆ value_left ┆ value_right │
+            │ --- ┆ ---         ┆ ---          ┆ ---        ┆ ---         │
+            │ i64 ┆ str         ┆ str          ┆ f64        ┆ f64         │
+            ╞═════╪═════════════╪══════════════╪════════════╪═════════════╡
+            │ 1   ┆ a           ┆ a            ┆ 10.0       ┆ 10.0        │
+            │ 2   ┆ b           ┆ x            ┆ 20.0       ┆ 25.0        │
+            │ 3   ┆ c           ┆ x            ┆ 30.0       ┆ 30.0        │
+            └─────┴─────────────┴──────────────┴────────────┴─────────────┘
         """
         primary_key = self._check_primary_key()
         result = (
@@ -252,7 +315,17 @@ class DataFrameComparison:
     @cached_method
     def num_rows_joined(self) -> int:
         """The number of rows that can be joined, regardless of whether column values
-        match in columns which are not used for joining."""
+        match in columns which are not used for joining.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1, 2, 3, 4], "value": [10.0, 20.0, 30.0, 40.0]})
+            >>> right = pl.DataFrame({"id": [1, 2, 3, 5], "value": [10.0, 25.0, 30.0, 50.0]})
+            >>> comparison = compare_frames(left, right, primary_key="id")
+            >>> comparison.num_rows_joined()
+            3
+        """
         return lazy_len(self.joined(lazy=True))
 
     @overload
@@ -284,6 +357,35 @@ class DataFrameComparison:
 
         Columns which are not used for joining have a suffix ``_left`` for the left data
         frame and a suffix ``_right`` for the right data frame.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1, 2, 3], "status": ["a", "b", "c"], "value": [10.0, 20.0, 30.0]})
+            >>> right = pl.DataFrame({"id": [1, 2, 3], "status": ["a", "x", "x"], "value": [10.0, 25.0, 30.0]})
+            >>> comparison = compare_frames(left, right, primary_key="id")
+            >>> comparison.joined_equal()
+            shape: (1, 5)
+            ┌─────┬─────────────┬──────────────┬────────────┬─────────────┐
+            │ id  ┆ status_left ┆ status_right ┆ value_left ┆ value_right │
+            │ --- ┆ ---         ┆ ---          ┆ ---        ┆ ---         │
+            │ i64 ┆ str         ┆ str          ┆ f64        ┆ f64         │
+            ╞═════╪═════════════╪══════════════╪════════════╪═════════════╡
+            │ 1   ┆ a           ┆ a            ┆ 10.0       ┆ 10.0        │
+            └─────┴─────────────┴──────────────┴────────────┴─────────────┘
+
+            Only check a subset of columns for equality:
+
+            >>> comparison.joined_equal("value")
+            shape: (2, 5)
+            ┌─────┬─────────────┬──────────────┬────────────┬─────────────┐
+            │ id  ┆ status_left ┆ status_right ┆ value_left ┆ value_right │
+            │ --- ┆ ---         ┆ ---          ┆ ---        ┆ ---         │
+            │ i64 ┆ str         ┆ str          ┆ f64        ┆ f64         │
+            ╞═════╪═════════════╪══════════════╪════════════╪═════════════╡
+            │ 1   ┆ a           ┆ a            ┆ 10.0       ┆ 10.0        │
+            │ 3   ┆ c           ┆ x            ┆ 30.0       ┆ 30.0        │
+            └─────┴─────────────┴──────────────┴────────────┴─────────────┘
         """
         columns = self._validate_subset_of_common_columns(subset)
         result = self.joined(lazy=True).filter(self._condition_equal_rows(columns))
@@ -304,6 +406,17 @@ class DataFrameComparison:
 
         Raises:
             ValueError: If any of the provided columns are not common columns.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1, 2, 3], "status": ["a", "b", "c"], "value": [10.0, 20.0, 30.0]})
+            >>> right = pl.DataFrame({"id": [1, 2, 3], "status": ["a", "x", "x"], "value": [10.0, 25.0, 30.0]})
+            >>> comparison = compare_frames(left, right, primary_key="id")
+            >>> comparison.num_rows_joined_equal()
+            1
+            >>> comparison.num_rows_joined_equal("value")
+            2
         """
         return lazy_len(self.joined_equal(*subset, lazy=True))
 
@@ -353,6 +466,36 @@ class DataFrameComparison:
 
         Columns which are not used for joining have a suffix ``_left`` for the left data
         frame and a suffix ``_right`` for the right data frame.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1, 2, 3], "status": ["a", "b", "c"], "value": [10.0, 20.0, 30.0]})
+            >>> right = pl.DataFrame({"id": [1, 2, 3], "status": ["a", "x", "x"], "value": [10.0, 25.0, 30.0]})
+            >>> comparison = compare_frames(left, right, primary_key="id")
+            >>> comparison.joined_unequal()
+            shape: (2, 5)
+            ┌─────┬─────────────┬──────────────┬────────────┬─────────────┐
+            │ id  ┆ status_left ┆ status_right ┆ value_left ┆ value_right │
+            │ --- ┆ ---         ┆ ---          ┆ ---        ┆ ---         │
+            │ i64 ┆ str         ┆ str          ┆ f64        ┆ f64         │
+            ╞═════╪═════════════╪══════════════╪════════════╪═════════════╡
+            │ 2   ┆ b           ┆ x            ┆ 20.0       ┆ 25.0        │
+            │ 3   ┆ c           ┆ x            ┆ 30.0       ┆ 30.0        │
+            └─────┴─────────────┴──────────────┴────────────┴─────────────┘
+
+            Use ``select="subset"`` to only include the columns being compared:
+
+            >>> comparison.joined_unequal("status", select="subset")
+            shape: (2, 3)
+            ┌─────┬─────────────┬──────────────┐
+            │ id  ┆ status_left ┆ status_right │
+            │ --- ┆ ---         ┆ ---          │
+            │ i64 ┆ str         ┆ str          │
+            ╞═════╪═════════════╪══════════════╡
+            │ 2   ┆ b           ┆ x            │
+            │ 3   ┆ c           ┆ x            │
+            └─────┴─────────────┴──────────────┘
         """
         if select not in ("all", "subset") and not isinstance(select, list):
             raise ValueError(
@@ -395,6 +538,17 @@ class DataFrameComparison:
 
         Raises:
             ValueError: If any of the provided columns are not common columns.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1, 2, 3], "status": ["a", "b", "c"], "value": [10.0, 20.0, 30.0]})
+            >>> right = pl.DataFrame({"id": [1, 2, 3], "status": ["a", "x", "x"], "value": [10.0, 25.0, 30.0]})
+            >>> comparison = compare_frames(left, right, primary_key="id")
+            >>> comparison.num_rows_joined_unequal()
+            2
+            >>> comparison.num_rows_joined_unequal("value")
+            1
         """
         return lazy_len(self.joined_unequal(*subset, lazy=True))
 
@@ -415,6 +569,22 @@ class DataFrameComparison:
         Returns:
             A data frame or lazy frame containing the rows that are only in the left data
             frame.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1, 2, 3, 4], "value": [10.0, 20.0, 30.0, 40.0]})
+            >>> right = pl.DataFrame({"id": [1, 2, 3, 5], "value": [10.0, 25.0, 30.0, 50.0]})
+            >>> comparison = compare_frames(left, right, primary_key="id")
+            >>> comparison.left_only()
+            shape: (1, 2)
+            ┌─────┬───────┐
+            │ id  ┆ value │
+            │ --- ┆ ---   │
+            │ i64 ┆ f64   │
+            ╞═════╪═══════╡
+            │ 4   ┆ 40.0  │
+            └─────┴───────┘
         """
         primary_key = self._check_primary_key()
         result = self.left.join(
@@ -425,7 +595,17 @@ class DataFrameComparison:
     @cached_method
     def num_rows_left_only(self) -> int:
         """The number of rows in the left data frame which cannot be joined with a row
-        in the right data frame."""
+        in the right data frame.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1, 2, 3, 4], "value": [10.0, 20.0, 30.0, 40.0]})
+            >>> right = pl.DataFrame({"id": [1, 2, 3, 5], "value": [10.0, 25.0, 30.0, 50.0]})
+            >>> comparison = compare_frames(left, right, primary_key="id")
+            >>> comparison.num_rows_left_only()
+            1
+        """
         return lazy_len(self.left_only(lazy=True))
 
     @overload
@@ -445,6 +625,22 @@ class DataFrameComparison:
         Returns:
             A data frame or lazy frame containing the rows that are only in the right data
             frame.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1, 2, 3, 4], "value": [10.0, 20.0, 30.0, 40.0]})
+            >>> right = pl.DataFrame({"id": [1, 2, 3, 5], "value": [10.0, 25.0, 30.0, 50.0]})
+            >>> comparison = compare_frames(left, right, primary_key="id")
+            >>> comparison.right_only()
+            shape: (1, 2)
+            ┌─────┬───────┐
+            │ id  ┆ value │
+            │ --- ┆ ---   │
+            │ i64 ┆ f64   │
+            ╞═════╪═══════╡
+            │ 5   ┆ 50.0  │
+            └─────┴───────┘
         """
         primary_key = self._check_primary_key()
         result = self.right.join(
@@ -455,7 +651,17 @@ class DataFrameComparison:
     @cached_method
     def num_rows_right_only(self) -> int:
         """The number of rows in the right data frame which cannot be joined with a row
-        in the left data frame."""
+        in the left data frame.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1, 2, 3, 4], "value": [10.0, 20.0, 30.0, 40.0]})
+            >>> right = pl.DataFrame({"id": [1, 2, 3, 5], "value": [10.0, 25.0, 30.0, 50.0]})
+            >>> comparison = compare_frames(left, right, primary_key="id")
+            >>> comparison.num_rows_right_only()
+            1
+        """
         return lazy_len(self.right_only(lazy=True))
 
     @cached_method
@@ -464,6 +670,24 @@ class DataFrameComparison:
 
         Args:
             check_dtypes: Whether to check that the data types of columns match exactly.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1, 2], "value": [10, 20]})
+            >>> right = pl.DataFrame({"id": [1, 2], "value": [10, 20]})
+            >>> compare_frames(left, right, primary_key="id").equal()
+            True
+
+            When data types differ, ``equal()`` returns ``False`` but
+            ``equal(check_dtypes=False)`` may return ``True``:
+
+            >>> right_float = pl.DataFrame({"id": [1, 2], "value": [10.0, 20.0]})
+            >>> comparison = compare_frames(left, right_float, primary_key="id")
+            >>> comparison.equal()
+            False
+            >>> comparison.equal(check_dtypes=False)
+            True
         """
         # We explicitly check emptiness because we cannot properly sort data frames with
         # empty schemas.
@@ -518,7 +742,16 @@ class DataFrameComparison:
         )
 
     def equal_num_rows(self) -> bool:
-        """Whether the number of rows in the left and right data frames are equal."""
+        """Whether the number of rows in the left and right data frames are equal.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1, 2, 3], "value": [10.0, 20.0, 30.0]})
+            >>> right = pl.DataFrame({"id": [1, 2], "value": [10.0, 20.0]})
+            >>> compare_frames(left, right, primary_key="id").equal_num_rows()
+            False
+        """
         return self.num_rows_left() == self.num_rows_right()
 
     @overload
@@ -539,6 +772,17 @@ class DataFrameComparison:
             A single float for the fraction or a mapping from column name to fraction,
             depending on the value of ``column``. The mapping contains all common
             columns. It is empty in case there are no common (non-primary key) columns.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1, 2, 3], "status": ["a", "b", "c"], "value": [10.0, 20.0, 30.0]})
+            >>> right = pl.DataFrame({"id": [1, 2, 3], "status": ["a", "x", "x"], "value": [10.0, 25.0, 30.0]})
+            >>> comparison = compare_frames(left, right, primary_key="id")
+            >>> comparison.fraction_same("value")
+            0.6666666666666666
+            >>> comparison.fraction_same()
+            {'status': 0.3333333333333333, 'value': 0.6666666666666666}
         """
         primary_key = self._check_primary_key()
         if column is not None:
@@ -611,6 +855,36 @@ class DataFrameComparison:
         Returns:
             A data frame or lazy frame containing the change counts of the specified
             column, sorted by count with the most frequent change first.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1, 2, 3], "status": ["a", "b", "c"]})
+            >>> right = pl.DataFrame({"id": [1, 2, 3], "status": ["a", "x", "x"]})
+            >>> comparison = compare_frames(left, right, primary_key="id")
+            >>> comparison.change_counts("status")
+            shape: (2, 3)
+            ┌──────┬───────┬───────┐
+            │ left ┆ right ┆ count │
+            │ ---  ┆ ---   ┆ ---   │
+            │ str  ┆ str   ┆ u32   │
+            ╞══════╪═══════╪═══════╡
+            │ c    ┆ x     ┆ 1     │
+            │ b    ┆ x     ┆ 1     │
+            └──────┴───────┴───────┘
+
+            Include a sample primary key for each change:
+
+            >>> comparison.change_counts("status", include_sample_primary_key=True)
+            shape: (2, 4)
+            ┌──────┬───────┬───────┬───────────┐
+            │ left ┆ right ┆ count ┆ sample_id │
+            │ ---  ┆ ---   ┆ ---   ┆ ---       │
+            │ str  ┆ str   ┆ u32   ┆ i64       │
+            ╞══════╪═══════╪═══════╪═══════════╡
+            │ c    ┆ x     ┆ 1     ┆ 3         │
+            │ b    ┆ x     ┆ 1     ┆ 2         │
+            └──────┴───────┴───────┴───────────┘
         """
         result = (
             self.joined_unequal(column, lazy=True)
@@ -677,6 +951,14 @@ class DataFrameComparison:
 
         Returns:
             A summary which can be printed or written to a file.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1, 2, 3], "status": ["a", "b", "c"]})
+            >>> right = pl.DataFrame({"id": [1, 2, 3], "status": ["a", "x", "x"]})
+            >>> comparison = compare_frames(left, right, primary_key="id")
+            >>> print(comparison.summary())  # doctest: +SKIP
         """
         # NOTE: We're importing here to prevent circular imports
         from .summary import Summary
@@ -793,12 +1075,30 @@ class Schemas:
             return set(self)
 
         def matching_dtypes(self) -> Schemas.Schema:
-            """The columns that have matching dtypes, mapped to the common dtype."""
+            """The columns that have matching dtypes, mapped to the common dtype.
+
+            Examples:
+                >>> import polars as pl
+                >>> from diffly import compare_frames
+                >>> left = pl.DataFrame({"id": [1], "value": [10]})
+                >>> right = pl.DataFrame({"id": [1], "value": [10.0]})
+                >>> compare_frames(left, right, primary_key="id").schemas.in_common().matching_dtypes()
+                {'id': Int64}
+            """
             return Schemas.Schema({k: v[0] for k, v in self.items() if v[0] == v[1]})
 
         def mismatching_dtypes(self) -> Self:
             """The columns that have mismatching dtypes, mapped to the dtypes in the
-            left and right data frame."""
+            left and right data frame.
+
+            Examples:
+                >>> import polars as pl
+                >>> from diffly import compare_frames
+                >>> left = pl.DataFrame({"id": [1], "value": [10]})
+                >>> right = pl.DataFrame({"id": [1], "value": [10.0]})
+                >>> compare_frames(left, right, primary_key="id").schemas.in_common().mismatching_dtypes()
+                {'value': (Int64, Float64)}
+            """
             return self.__class__({k: v for k, v in self.items() if v[0] != v[1]})
 
     def __init__(
@@ -810,11 +1110,29 @@ class Schemas:
         self._right_schema = right_schema
 
     def left(self) -> Schema:
-        """Schema of the left data frame."""
+        """Schema of the left data frame.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1], "value": [10.0]})
+            >>> right = pl.DataFrame({"id": [1], "value": [10.0]})
+            >>> compare_frames(left, right, primary_key="id").schemas.left()
+            {'id': Int64, 'value': Float64}
+        """
         return Schemas.Schema(dict(self._left_schema))
 
     def right(self) -> Schema:
-        """Schema of the right data frame."""
+        """Schema of the right data frame.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1], "value": [10.0]})
+            >>> right = pl.DataFrame({"id": [1], "score": [100]})
+            >>> compare_frames(left, right, primary_key="id").schemas.right()
+            {'id': Int64, 'score': Int64}
+        """
         return Schemas.Schema(dict(self._right_schema))
 
     def equal(self, *, check_dtypes: bool = True) -> bool:
@@ -822,6 +1140,17 @@ class Schemas:
 
         Args:
             check_dtypes: Whether to check that the data types of columns match exactly.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1], "value": [10]})
+            >>> right = pl.DataFrame({"id": [1], "value": [10.0]})
+            >>> schemas = compare_frames(left, right, primary_key="id").schemas
+            >>> schemas.equal()
+            False
+            >>> schemas.equal(check_dtypes=False)
+            True
         """
         if check_dtypes:
             return self.left() == self.right()
@@ -829,17 +1158,44 @@ class Schemas:
 
     def in_common(self) -> JointSchema:
         """Columns that are present in both data frames, mapped to their data types in
-        the left and right data frame."""
+        the left and right data frame.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1], "value": [10.0]})
+            >>> right = pl.DataFrame({"id": [1], "value": [10.0]})
+            >>> compare_frames(left, right, primary_key="id").schemas.in_common()
+            {'id': (Int64, Int64), 'value': (Float64, Float64)}
+        """
         return self.left() & self.right()
 
     def left_only(self) -> Schema:
         """Columns that are only present in the left data frame, mapped to their data
-        types."""
+        types.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1], "value": [10.0]})
+            >>> right = pl.DataFrame({"id": [1], "score": [100]})
+            >>> compare_frames(left, right, primary_key="id").schemas.left_only()
+            {'value': Float64}
+        """
         return self.left() - self.right()
 
     def right_only(self) -> Schema:
         """Columns that are only present in the right data frame, mapped to their data
-        types."""
+        types.
+
+        Examples:
+            >>> import polars as pl
+            >>> from diffly import compare_frames
+            >>> left = pl.DataFrame({"id": [1], "value": [10.0]})
+            >>> right = pl.DataFrame({"id": [1], "score": [100]})
+            >>> compare_frames(left, right, primary_key="id").schemas.right_only()
+            {'score': Int64}
+        """
         return self.right() - self.left()
 
 
