@@ -16,7 +16,8 @@ from diffly.cli import app
 runner = CliRunner()
 
 
-def test_cli_smoke(tmp_path: Path) -> None:
+@pytest.mark.parametrize("output_json", [False, True])
+def test_cli_smoke(tmp_path: Path, output_json: bool) -> None:
     left = pl.DataFrame(
         {
             "name": ["cat", "dog", "mouse"],
@@ -35,20 +36,23 @@ def test_cli_smoke(tmp_path: Path) -> None:
 
     left.write_parquet(tmp_path / "left.parquet")
     right.write_parquet(tmp_path / "right.parquet")
-    result = runner.invoke(
-        app,
-        [
-            str(tmp_path / "left.parquet"),
-            str(tmp_path / "right.parquet"),
-            "--primary-key",
-            "name",
-        ],
-        color=True,
-    )
+    args = [
+        str(tmp_path / "left.parquet"),
+        str(tmp_path / "right.parquet"),
+        "--primary-key",
+        "name",
+    ]
+    if output_json:
+        args.append("--json")
+    result = runner.invoke(app, args, color=True)
     comparison = compare_frames(
         pl.scan_parquet(tmp_path / "left.parquet"),
         pl.scan_parquet(tmp_path / "right.parquet"),
         primary_key="name",
     )
     assert result.exit_code == 0
-    assert result.output == comparison.summary().format(pretty=True) + "\n"
+
+    if output_json:
+        assert result.output == comparison.summary().to_json() + "\n"
+    else:
+        assert result.output == comparison.summary().format(pretty=True) + "\n"
