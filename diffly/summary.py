@@ -220,6 +220,7 @@ def _compute_summary_data(
         rows_equal = comp._equal_rows()
     else:
         rows_equal = comp.equal_num_rows()
+    # NOTE: In slim mode, we only print the section if there are differences.
     if not slim or not rows_equal:
         if comp.primary_key is not None:
             rows = SummaryDataRows(
@@ -231,6 +232,8 @@ def _compute_summary_data(
                 n_right_only=comp.num_rows_right_only(),
                 _equal_rows=comp._equal_rows(),
                 _equal_num_rows=comp.equal_num_rows(),
+                # NOTE: In slim mode, we omit the row counts section and only show the
+                # row matches section.
                 _show_row_counts=not (comp.equal_num_rows() and slim),
             )
         else:
@@ -248,11 +251,15 @@ def _compute_summary_data(
 
     # --- Columns ---
     columns: list[SummaryDataColumn] | None = None
+    # NOTE: We can only compute column matches if there are primary key columns and at
+    # least one joined row.
     match_rates_can_be_computed = (
         comp.primary_key is not None and comp.num_rows_joined() > 0
     )
     if match_rates_can_be_computed:
         match_rates = comp.fraction_same()
+        # NOTE: In slim mode, we only print the columns section if there are
+        # non-primary key columns and at least one column has a match rate < 1.
         if not slim or (comp._other_common_columns and min(match_rates.values()) < 1):
             columns = []
             for col_name in sorted(match_rates):
@@ -453,6 +460,8 @@ class Summary:
                 " computed.",
                 style="italic",
             )
+        # NOTE: The primary key is only displayed in the default mode. If a primary key
+        # was not supplied, the warning is displayed in both modes.
         if not self.slim or primary_key is None:
             console.print(Padding(content, pad=(0, 3)))
             console.print("")
