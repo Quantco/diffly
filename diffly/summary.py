@@ -6,7 +6,7 @@ from __future__ import annotations
 import dataclasses
 import io
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Literal, cast
@@ -43,6 +43,10 @@ class SummaryDataSchemas:
     left_only: list[tuple[str, str]]
     in_common: list[tuple[str, str, str]]
     right_only: list[tuple[str, str]]
+    _equal: bool = field(default=False, repr=False)
+    _mismatching_dtypes: list[tuple[str, str, str]] = field(
+        default_factory=list, repr=False
+    )
 
 
 @dataclass
@@ -53,6 +57,8 @@ class SummaryDataRows:
     n_joined_equal: int | None
     n_joined_unequal: int | None
     n_right_only: int | None
+    _equal_rows: bool = field(default=False, repr=False)
+    _equal_num_rows: bool = field(default=False, repr=False)
 
 
 @dataclass
@@ -85,11 +91,13 @@ class SummaryData:
     columns: list[SummaryDataColumn] | None
     sample_rows_left_only: list[tuple[Any, ...]] | None
     sample_rows_right_only: list[tuple[Any, ...]] | None
+    _truncated_left_name: str = field(default="", repr=False)
+    _truncated_right_name: str = field(default="", repr=False)
 
     def to_dict(self) -> dict[str, Any]:
         def _convert(obj: Any) -> Any:
             if isinstance(obj, dict):
-                return {k: _convert(v) for k, v in obj.items()}
+                return {k: _convert(v) for k, v in obj.items() if not k.startswith("_")}
             if isinstance(obj, (list, tuple)):
                 return type(obj)(_convert(v) for v in obj)
             return _to_python(obj)
@@ -166,6 +174,9 @@ def _compute_summary_data(
     is_equal = comp.equal()
     n_rows_left = comp.num_rows_left()
 
+    truncated_left = _truncate_name(left_name)
+    truncated_right = _truncate_name(right_name)
+
     if is_equal:
         return SummaryData(
             equal=True,
@@ -180,6 +191,8 @@ def _compute_summary_data(
             columns=None,
             sample_rows_left_only=None,
             sample_rows_right_only=None,
+            _truncated_left_name=truncated_left,
+            _truncated_right_name=truncated_right,
         )
 
     # --- Schemas ---
@@ -190,6 +203,7 @@ def _compute_summary_data(
         left_only_cols = sorted(schemas_obj.left_only().items())
         right_only_cols = sorted(schemas_obj.right_only().items())
         in_common = sorted(schemas_obj.in_common().items())
+        mismatching = sorted(schemas_obj.in_common().mismatching_dtypes().items())
         schemas = SummaryDataSchemas(
             left_only=[(name, str(dtype)) for name, dtype in left_only_cols],
             in_common=[
@@ -197,6 +211,11 @@ def _compute_summary_data(
                 for name, (left_dtype, right_dtype) in in_common
             ],
             right_only=[(name, str(dtype)) for name, dtype in right_only_cols],
+            _equal=schemas_equal,
+            _mismatching_dtypes=[
+                (name, str(left_dtype), str(right_dtype))
+                for name, (left_dtype, right_dtype) in mismatching
+            ],
         )
 
     # --- Rows ---
@@ -215,6 +234,8 @@ def _compute_summary_data(
                 n_joined_equal=comp.num_rows_joined_equal(),
                 n_joined_unequal=comp.num_rows_joined_unequal(),
                 n_right_only=comp.num_rows_right_only(),
+                _equal_rows=comp._equal_rows(),
+                _equal_num_rows=comp.equal_num_rows(),
             )
         else:
             rows = SummaryDataRows(
@@ -224,6 +245,8 @@ def _compute_summary_data(
                 n_joined_equal=None,
                 n_joined_unequal=None,
                 n_right_only=None,
+                _equal_rows=False,
+                _equal_num_rows=comp.equal_num_rows(),
             )
 
     # --- Columns ---
@@ -306,6 +329,8 @@ def _compute_summary_data(
         columns=columns,
         sample_rows_left_only=sample_rows_left_only,
         sample_rows_right_only=sample_rows_right_only,
+        _truncated_left_name=truncated_left,
+        _truncated_right_name=truncated_right,
     )
 
 
@@ -421,8 +446,7 @@ class Summary:
     # --------------------------------- PRIMARY KEY ---------------------------------- #
 
     def _print_primary_key(self, console: Console) -> None:
-        primary_key = self._data.primary_key
-        if primary_key is not None:
+        if (primary_key := self._data.primary_key) is not None:
             content = self._section_primary_key(primary_key)
         else:
             content = Text(
@@ -449,14 +473,8 @@ class Summary:
             return
 
         schemas = self._data.schemas
-        schemas_equal = (
-            not schemas.left_only
-            and not schemas.right_only
-            and all(left == right for _, left, right in schemas.in_common)
-        )
-
         content: RenderableType
-        if schemas_equal:
+        if schemas._equal:
             num_cols = len(schemas.in_common)
             content = Text(
                 f"Schemas match exactly (column count: {num_cols:,}).", style="italic"
@@ -488,7 +506,7 @@ class Summary:
 
         # Left only
         if len(left_only_names) > 0:
-            left_only_header = f"{capitalize_first(_truncate_name(self._data.left_name))} only \n{_print_num_columns(len(left_only_names))}"
+            left_only_header = f"{capitalize_first(self._data._truncated_left_name)} only \n{_print_num_columns(len(left_only_names))}"
             table.add_column(
                 left_only_header,
                 header_style="red",
@@ -512,11 +530,7 @@ class Summary:
         )
         num_in_common = len(schemas.in_common)
         table_data[in_common_header] = []
-        mismatching = [
-            (name, left, right)
-            for name, left, right in schemas.in_common
-            if left != right
-        ]
+        mismatching = schemas._mismatching_dtypes
         if len(mismatching) == 0:
             table_data[in_common_header] = ["..."]
             max_column_width = max(
@@ -542,7 +556,7 @@ class Summary:
 
         # Right only
         if len(right_only_names) > 0:
-            right_only_header = f"{capitalize_first(_truncate_name(self._data.right_name))} only\n{_print_num_columns(len(right_only_names))}"
+            right_only_header = f"{capitalize_first(self._data._truncated_right_name)} only\n{_print_num_columns(len(right_only_names))}"
             table.add_column(
                 right_only_header,
                 header_style="green",
@@ -582,7 +596,7 @@ class Summary:
 
     def _render_rows_without_primary_key(self, rows: SummaryDataRows) -> RenderableType:
         content: RenderableType
-        if rows.n_left == rows.n_right:
+        if rows._equal_num_rows:
             content = Text(
                 f"The number of rows matches exactly (row count: {rows.n_left:,}).",
                 style="italic",
@@ -598,8 +612,7 @@ class Summary:
         assert rows.n_right_only is not None
 
         content: RenderableType
-        equal_rows = rows.n_joined_equal == rows.n_left == rows.n_right
-        if equal_rows:
+        if rows._equal_rows:
             content = Text(
                 f"All rows match exactly (row count: {rows.n_left:,}).",
                 style="italic",
@@ -607,7 +620,7 @@ class Summary:
         else:
             # NOTE: In slim mode, we omit the row counts section and only show the
             # row matches section.
-            if (rows.n_left == rows.n_right) and self._data.slim:
+            if rows._equal_num_rows and self._data.slim:
                 content = Group(self._section_row_matches(rows))
             else:
                 content = Group(
@@ -632,10 +645,8 @@ class Summary:
         count_rows: list[RenderableType] = []
 
         count_grid = Table(padding=0, box=None)
-        left_header = f"{capitalize_first(_truncate_name(self._data.left_name))} count"
-        right_header = (
-            f"{capitalize_first(_truncate_name(self._data.right_name))} count"
-        )
+        left_header = f"{capitalize_first(self._data._truncated_left_name)} count"
+        right_header = f"{capitalize_first(self._data._truncated_right_name)} count"
         count_grid.add_column(left_header, justify="center")
         count_grid.add_column("", justify="center")
         count_grid.add_column(right_header, justify="center")
@@ -741,7 +752,7 @@ class Summary:
                 fraction_left_only = rows.n_left_only / rows.n_left
                 grid.add_row(
                     f"{rows.n_left_only:,}",
-                    f"{_truncate_name(self._data.left_name)} only",
+                    f"{self._data._truncated_left_name} only",
                     f"({_format_fraction_as_percentage(fraction_left_only)})",
                 )
                 grid.add_section()
@@ -765,7 +776,7 @@ class Summary:
                 fraction_right_only = rows.n_right_only / rows.n_right
                 grid.add_row(
                     f"{rows.n_right_only:,}",
-                    f"{_truncate_name(self._data.right_name)} only",
+                    f"{self._data._truncated_right_name} only",
                     f"({_format_fraction_as_percentage(fraction_right_only)})",
                 )
             columns.append(grid)
@@ -880,10 +891,10 @@ class Summary:
     def _print_sample_rows_only_one_side(self, console: Console, side: Side) -> None:
         if side == Side.LEFT:
             sample_rows = self._data.sample_rows_left_only
-            name = _truncate_name(self._data.left_name)
+            name = self._data._truncated_left_name
         else:
             sample_rows = self._data.sample_rows_right_only
-            name = _truncate_name(self._data.right_name)
+            name = self._data._truncated_right_name
 
         primary_key = self._data.primary_key
         if primary_key is not None and sample_rows is not None and len(sample_rows) > 0:
