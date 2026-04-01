@@ -3,6 +3,8 @@
 
 import itertools
 import json
+from datetime import date, datetime, timedelta
+from decimal import Decimal
 
 import polars as pl
 import pytest
@@ -15,6 +17,7 @@ from diffly.summary import (
     SummaryDataColumnChange,
     SummaryDataRows,
     SummaryDataSchemas,
+    _to_python,
 )
 
 
@@ -235,6 +238,51 @@ def test_summary_data_slim_suppresses_matching_sections() -> None:
     assert data.rows is not None
     # Columns have differences -> shown
     assert data.columns is not None
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        (datetime(2024, 1, 15, 12, 30), "2024-01-15T12:30:00"),
+        (date(2024, 1, 15), "2024-01-15"),
+        (timedelta(seconds=5), 5.0),
+        (Decimal("1.5"), 1.5),
+        (42, 42),
+        ("hello", "hello"),
+        (None, None),
+    ],
+)
+def test_to_python(value: object, expected: object) -> None:
+    assert _to_python(value) == expected
+
+
+def test_to_dict_with_typed_values() -> None:
+    comp = _make_comparison()
+    summary = comp.summary(top_k_column_changes=3, sample_k_rows_only=3)
+    d = summary._data.to_dict()
+
+    assert isinstance(d, dict)
+    assert d["equal"] is False
+    assert isinstance(d["columns"], list)
+    assert isinstance(d["sample_rows_left_only"], list)
+    # Verify roundtrip through JSON works
+    json_str = json.dumps(d)
+    parsed = json.loads(json_str)
+    assert parsed["equal"] is False
+    assert len(parsed["columns"]) > 0
+
+
+def test_to_json_with_date_values() -> None:
+    left = pl.DataFrame({"id": [1, 2], "d": [date(2024, 1, 1), date(2024, 6, 1)]})
+    right = pl.DataFrame({"id": [1, 2], "d": [date(2024, 1, 1), date(2024, 12, 1)]})
+    comp = compare_frames(left, right, primary_key="id")
+    summary = comp.summary(top_k_column_changes=3)
+    parsed = json.loads(summary.to_json())
+    assert parsed["equal"] is False
+    col = next(c for c in parsed["columns"] if c["name"] == "d")
+    assert col["changes"] is not None
+    assert col["changes"][0]["old"] == "2024-06-01"
+    assert col["changes"][0]["new"] == "2024-12-01"
 
 
 def test_summary_data_n_total_changes() -> None:

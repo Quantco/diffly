@@ -49,10 +49,10 @@ class SummaryDataSchemas:
 class SummaryDataRows:
     n_left: int
     n_right: int
-    n_left_only: int | None  # None when no primary key
-    n_joined_equal: int | None  # None when no primary key
-    n_joined_unequal: int | None  # None when no primary key
-    n_right_only: int | None  # None when no primary key
+    n_left_only: int | None
+    n_joined_equal: int | None
+    n_joined_unequal: int | None
+    n_right_only: int | None
 
 
 @dataclass
@@ -75,6 +75,8 @@ class SummaryDataColumn:
 class SummaryData:
     equal: bool
     n_rows_left: int
+    slim: bool
+    show_perfect_column_matches: bool
     left_name: str
     right_name: str
     primary_key: list[str] | None
@@ -126,9 +128,8 @@ def _compute_summary_data(
 
     hidden_columns = hidden_columns or []
 
-    # Validation (same as old Summary.__init__)
-    if comparison.primary_key is not None:
-        overlap = set(hidden_columns).intersection(set(comparison.primary_key))
+    def _validate_primary_key_hidden_columns() -> None:
+        overlap = set(hidden_columns).intersection(set(comparison.primary_key or []))
         if overlap and sample_k_rows_only > 0:
             raise ValueError(
                 f"Cannot show sample rows only on the left or right side when primary"
@@ -139,6 +140,8 @@ def _compute_summary_data(
                 f"Cannot show sample primary key for changed columns when primary"
                 f" key column(s) {', '.join(overlap)} should be hidden."
             )
+
+    _validate_primary_key_hidden_columns()
     if top_k_column_changes == 0 and show_sample_primary_key_per_change:
         raise ValueError(
             "Cannot show sample primary key per change when top_k_column_changes is 0."
@@ -148,8 +151,6 @@ def _compute_summary_data(
         col: 0 if col in hidden_columns else top_k_column_changes
         for col in comparison._other_common_columns
     }
-
-    # Materialize frames (same pattern as old Summary.__init__)
     comp = DataFrameComparison(
         left=comparison.left.collect().lazy(),
         right=comparison.right.collect().lazy(),
@@ -169,6 +170,8 @@ def _compute_summary_data(
         return SummaryData(
             equal=True,
             n_rows_left=n_rows_left,
+            slim=slim,
+            show_perfect_column_matches=show_perfect_column_matches,
             left_name=left_name,
             right_name=right_name,
             primary_key=comp.primary_key,
@@ -293,6 +296,8 @@ def _compute_summary_data(
     return SummaryData(
         equal=False,
         n_rows_left=n_rows_left,
+        slim=slim,
+        show_perfect_column_matches=show_perfect_column_matches,
         left_name=left_name,
         right_name=right_name,
         primary_key=comp.primary_key,
@@ -330,11 +335,6 @@ class Summary:
         slim: bool,
         hidden_columns: list[str] | None,
     ):
-        def _truncate_name(name: str) -> str:
-            if len(name) > CUSTOM_COLUMN_NAME_MAX_LENGTH:
-                return f"{name[:CUSTOM_COLUMN_NAME_MAX_LENGTH]}..."
-            return name
-
         self._data = _compute_summary_data(
             comparison,
             show_perfect_column_matches=show_perfect_column_matches,
@@ -346,10 +346,6 @@ class Summary:
             slim=slim,
             hidden_columns=hidden_columns,
         )
-        self.slim = slim
-        self.show_perfect_column_matches = show_perfect_column_matches
-        self.left_name = _truncate_name(left_name)
-        self.right_name = _truncate_name(right_name)
 
     def format(self, pretty: bool | None = None) -> str:
         """Format this summary for printing.
@@ -393,7 +389,7 @@ class Summary:
     # -------------------------------------------------------------------------------- #
 
     def _print_to_console(self, console: Console) -> None:
-        if not self.slim:
+        if not self._data.slim:
             console.print(
                 Panel(
                     Text("Diffly Summary", style="bold", justify="center"),
@@ -437,7 +433,7 @@ class Summary:
             )
         # NOTE: The primary key is only displayed in the default mode. If a primary
         # key was not supplied, the warning is displayed in both modes.
-        if not self.slim or primary_key is None:
+        if not self._data.slim or primary_key is None:
             console.print(Padding(content, pad=(0, 3)))
             console.print("")
 
@@ -492,7 +488,7 @@ class Summary:
 
         # Left only
         if len(left_only_names) > 0:
-            left_only_header = f"{capitalize_first(self.left_name)} only \n{_print_num_columns(len(left_only_names))}"
+            left_only_header = f"{capitalize_first(_truncate_name(self._data.left_name))} only \n{_print_num_columns(len(left_only_names))}"
             table.add_column(
                 left_only_header,
                 header_style="red",
@@ -546,7 +542,7 @@ class Summary:
 
         # Right only
         if len(right_only_names) > 0:
-            right_only_header = f"{capitalize_first(self.right_name)} only\n{_print_num_columns(len(right_only_names))}"
+            right_only_header = f"{capitalize_first(_truncate_name(self._data.right_name))} only\n{_print_num_columns(len(right_only_names))}"
             table.add_column(
                 right_only_header,
                 header_style="green",
@@ -611,7 +607,7 @@ class Summary:
         else:
             # NOTE: In slim mode, we omit the row counts section and only show the
             # row matches section.
-            if (rows.n_left == rows.n_right) and self.slim:
+            if (rows.n_left == rows.n_right) and self._data.slim:
                 content = Group(self._section_row_matches(rows))
             else:
                 content = Group(
@@ -636,8 +632,10 @@ class Summary:
         count_rows: list[RenderableType] = []
 
         count_grid = Table(padding=0, box=None)
-        left_header = f"{capitalize_first(self.left_name)} count"
-        right_header = f"{capitalize_first(self.right_name)} count"
+        left_header = f"{capitalize_first(_truncate_name(self._data.left_name))} count"
+        right_header = (
+            f"{capitalize_first(_truncate_name(self._data.right_name))} count"
+        )
         count_grid.add_column(left_header, justify="center")
         count_grid.add_column("", justify="center")
         count_grid.add_column(right_header, justify="center")
@@ -743,7 +741,7 @@ class Summary:
                 fraction_left_only = rows.n_left_only / rows.n_left
                 grid.add_row(
                     f"{rows.n_left_only:,}",
-                    f"{self.left_name} only",
+                    f"{_truncate_name(self._data.left_name)} only",
                     f"({_format_fraction_as_percentage(fraction_left_only)})",
                 )
                 grid.add_section()
@@ -767,7 +765,7 @@ class Summary:
                 fraction_right_only = rows.n_right_only / rows.n_right
                 grid.add_row(
                     f"{rows.n_right_only:,}",
-                    f"{self.right_name} only",
+                    f"{_truncate_name(self._data.right_name)} only",
                     f"({_format_fraction_as_percentage(fraction_right_only)})",
                 )
             columns.append(grid)
@@ -812,7 +810,7 @@ class Summary:
             visible = [
                 c
                 for c in columns
-                if self.show_perfect_column_matches or c.match_rate < 1
+                if self._data.show_perfect_column_matches or c.match_rate < 1
             ]
             if not visible:
                 display_items.append(
@@ -882,10 +880,10 @@ class Summary:
     def _print_sample_rows_only_one_side(self, console: Console, side: Side) -> None:
         if side == Side.LEFT:
             sample_rows = self._data.sample_rows_left_only
-            name = self.left_name
+            name = _truncate_name(self._data.left_name)
         else:
             sample_rows = self._data.sample_rows_right_only
-            name = self.right_name
+            name = _truncate_name(self._data.right_name)
 
         primary_key = self._data.primary_key
         if primary_key is not None and sample_rows is not None and len(sample_rows) > 0:
@@ -933,6 +931,12 @@ def _print_section(console: Console, heading: str, content: RenderableType) -> N
             pad=(0, 1, 1, 1),
         ),
     )
+
+
+def _truncate_name(name: str) -> str:
+    if len(name) > CUSTOM_COLUMN_NAME_MAX_LENGTH:
+        return f"{name[:CUSTOM_COLUMN_NAME_MAX_LENGTH]}..."
+    return name
 
 
 def _format_colname(name: str) -> str:
