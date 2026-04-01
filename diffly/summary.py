@@ -137,7 +137,9 @@ def _compute_summary_data(
     hidden_columns = hidden_columns or []
 
     def _validate_primary_key_hidden_columns() -> None:
-        overlap = set(hidden_columns).intersection(set(comparison.primary_key or []))
+        overlap = sorted(
+            set(hidden_columns).intersection(set(comparison.primary_key or []))
+        )
         if overlap and sample_k_rows_only > 0:
             raise ValueError(
                 f"Cannot show sample rows only on the left or right side when primary"
@@ -343,7 +345,6 @@ def _compute_summary_data(
 # ---------------------------------------------------------------------------- #
 
 
-@dataclass
 class Summary:
     """Container object for generating a summary of the comparison of two data frames.
 

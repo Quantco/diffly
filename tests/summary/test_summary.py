@@ -157,7 +157,7 @@ def _make_comparison() -> DataFrameComparison:
 @pytest.mark.parametrize(
     "show_perfect_column_matches, show_top_column_changes, slim, sample_rows, sample_pk, hide_value",
     [
-        (*combo[:2], combo[2], combo[3], combo[3] and combo[1], combo[4])
+        (combo[0], combo[1], combo[2], combo[3], combo[3] and combo[1], combo[4])
         for combo in itertools.product([True, False], repeat=5)
     ],
 )
