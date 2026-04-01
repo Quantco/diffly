@@ -4,7 +4,7 @@
 import itertools
 import json
 from collections.abc import Callable
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -155,10 +155,10 @@ def _make_comparison() -> DataFrameComparison:
 
 
 @pytest.mark.parametrize(
-    "show_perfect_column_matches, show_top_column_changes, slim, sample_rows, sample_pk",
+    "show_perfect_column_matches, show_top_column_changes, slim, sample_rows, sample_pk, hide_value",
     [
-        (*combo[:2], combo[2], combo[3], combo[3] and combo[1])
-        for combo in itertools.product([True, False], repeat=4)
+        (*combo[:2], combo[2], combo[3], combo[3] and combo[1], combo[4])
+        for combo in itertools.product([True, False], repeat=5)
     ],
 )
 def test_summary_data_parametrized(
@@ -167,15 +167,18 @@ def test_summary_data_parametrized(
     slim: bool,
     sample_rows: bool,
     sample_pk: bool,
+    hide_value: bool,
 ) -> None:
     comp = _make_comparison()
     top_k = 3 if show_top_column_changes else 0
+    hidden_columns = ["value"] if hide_value else None
     summary = comp.summary(
         show_perfect_column_matches=show_perfect_column_matches,
         top_k_column_changes=top_k,
         sample_k_rows_only=3 if sample_rows else 0,
         show_sample_primary_key_per_change=sample_pk,
         slim=slim,
+        hidden_columns=hidden_columns,
     )
     result = json.loads(summary.to_json())
 
@@ -194,11 +197,13 @@ def test_summary_data_parametrized(
         }
 
     # Columns: status has 100% match rate, value has 2/3
-    # show_perfect_column_matches controls whether the perfect status column appears
+    # - show_perfect_column_matches controls whether the perfect status column appears
+    # - hide_value suppresses changes for value (top_k forced to 0 for hidden columns)
+    show_value_changes = show_top_column_changes and not hide_value
     value_col = {
         "name": "value",
         "match_rate": pytest.approx(2 / 3),
-        "n_total_changes": 1 if show_top_column_changes else 0,
+        "n_total_changes": 1 if show_value_changes else 0,
         "changes": (
             [
                 {
@@ -208,7 +213,7 @@ def test_summary_data_parametrized(
                     "sample_pk": [2] if sample_pk else None,
                 }
             ]
-            if show_top_column_changes
+            if show_value_changes
             else None
         ),
     }
@@ -254,6 +259,7 @@ def test_summary_data_parametrized(
         (date(2024, 1, 1), "2024-01-01"),
         (datetime(2024, 1, 1, 12, 0, 0), "2024-01-01T12:00:00"),
         (Decimal("12.34"), 12.34),
+        (timedelta(hours=1, minutes=30), 5400),
     ],
 )
 def test__to_python(input: Any, expected: Any) -> None:
