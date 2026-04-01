@@ -1,34 +1,58 @@
-# Add `Digest` dataclass for machine-readable comparison output
+# Add `SummaryData` dataclass as the data layer for comparison output
 
 ## Context
 
-Currently, `DataFrameComparison.summary()` returns a `Summary` object that renders rich-formatted console output. There's no way to get structured, machine-readable data from a comparison (e.g., for LLM consumption, CI pipelines, or programmatic analysis). This adds a `digest()` method returning a plain dataclass hierarchy that can be serialized via `dataclasses.asdict()` and `json.dumps()`.
+`Summary` currently both extracts data from `DataFrameComparison` and renders it with Rich — every `_print_*` method queries the comparison object directly. There is no structured, machine-readable output format. We introduce `SummaryData` as an intermediate data layer: a plain dataclass hierarchy computed once in `Summary.__init__`, then consumed for both Rich rendering (`print(summary)` / `summary.format()`) and JSON serialization (`summary.to_json()`).
 
-## Dataclass Structure
+## Architecture
 
-All dataclasses in a new file `diffly/digest.py`:
+```
+DataFrameComparison.summary()
+        │
+        ▼
+      Summary.__init__
+        │
+        ├── calls _compute_summary_data() once
+        │           │
+        │           ▼
+        │      SummaryData          ← plain dataclass, no dependencies beyond stdlib
+        │
+        ├── print(summary) / summary.format()   → Rich rendering from SummaryData
+        └── summary.to_json()                   → JSON serialization from SummaryData
+```
+
+- **`SummaryData`** is the single source of truth for what data to present given the parameters (`slim`, `show_perfect_column_matches`, `top_k_column_changes`, etc.).
+- **`Summary`** computes a `SummaryData` in its `__init__` via `_compute_summary_data()`, stores it as `self._data`. All `_print_*` methods render from `self._data` instead of querying `self._comparison`. `to_json()` serializes `self._data`.
+- **`comparison.summary()`** remains the only entry point. No new method on `DataFrameComparison`.
+
+## Dataclass Design
+
+All dataclasses live in `diffly/summary.py` alongside the existing `Summary` class:
 
 ```python
 @dataclass
-class Digest:
+class SummaryData:
     equal: bool
     left_name: str
     right_name: str
     primary_key: list[str] | None
-    schemas: DigestSchemas | None       # None when equal, or slim + schemas match
-    rows: DigestRows | None             # None when equal, or slim + rows match
-    columns: list[DigestColumn] | None  # None when equal, no PK, no joined rows, or slim + all match
+    schemas: SummaryDataSchemas | None       # None when equal, or slim + schemas match
+    rows: SummaryDataRows | None             # None when equal, or slim + rows match
+    columns: list[SummaryDataColumn] | None  # None when equal, no PK, no joined rows, or slim + all match
     sample_rows_left_only: list[tuple[Any, ...]] | None   # None when no PK or sample_k==0
     sample_rows_right_only: list[tuple[Any, ...]] | None
 
+    def to_dict(self) -> dict[str, Any]: ...
+    def to_json(self, **kwargs) -> str: ...
+
 @dataclass
-class DigestSchemas:
+class SummaryDataSchemas:
     left_only: list[tuple[str, str]]                # (col_name, dtype_str)
     in_common: list[tuple[str, str, str]]            # (col_name, left_dtype_str, right_dtype_str)
     right_only: list[tuple[str, str]]
 
 @dataclass
-class DigestRows:
+class SummaryDataRows:
     n_left: int
     n_right: int
     n_left_only: int | None       # None when no primary key
@@ -37,71 +61,76 @@ class DigestRows:
     n_right_only: int | None
 
 @dataclass
-class DigestColumn:
+class SummaryDataColumn:
     name: str
     match_rate: float
-    changes: list[DigestColumnChange] | None  # None when top_k==0 or column is hidden
+    n_total_changes: int          # total distinct changes (needed for "...and N others")
+    changes: list[SummaryDataColumnChange] | None  # None when top_k==0 or column is hidden
 
 @dataclass
-class DigestColumnChange:
+class SummaryDataColumnChange:
     old: Any
     new: Any
     count: int
-    sample_pk: Any | None   # None when show_sample_primary_key_per_change=False
+    sample_pk: tuple[Any, ...] | None   # None when show_sample_primary_key_per_change=False
 ```
 
-**Design notes:**
+### Design decisions
 
-- `primary_key` is a top-level field so consumers know what the sample row tuples represent.
-- `sample_rows_left_only` / `sample_rows_right_only` use `list[tuple]` matching the primary key column order.
-- `in_common` uses 3-tuples `(name, left_dtype, right_dtype)` to capture dtype changes (when they match, `left_dtype == right_dtype`).
-- `schemas` is always populated (not `None`) when frames aren't equal and not slim-hidden, even if schemas match -- the caller might want to confirm schemas are identical. **Actually**: mirror `Summary` logic -- `None` when `slim=True` and schemas are equal.
+- **Primary key consistency:** Both `sample_rows_{left,right}_only` entries and `sample_pk` in `SummaryDataColumnChange` use `tuple[Any, ...]` matching the `primary_key` column order.
+- **None logic:** `schemas` is `None` when equal, or when `slim=True` and schemas match. Same pattern for `rows` and `columns`.
+- **`n_total_changes`** on `SummaryDataColumn`: needed to render `"(...and 5 others)"`. The `changes` list only holds the top-k.
+- **Equal + empty frames:** Summary distinguishes "empty but matching" from "match exactly" via row count. When `equal=True`, `rows` is `None`. _Alternative:_ add a top-level `n_rows_left` field if this proves awkward during implementation.
 
 ## Files to modify
 
-### 1. New: [diffly/digest.py](diffly/digest.py)
+### 1. `diffly/summary.py`
 
-- All dataclass definitions above
-- `_to_python(value)` helper to convert Polars values (date, datetime, timedelta, Decimal) to JSON-safe types
-- Builder function `_build_digest(comparison, **params) -> Digest` containing the logic to extract data from `DataFrameComparison`, mirroring the control flow of `Summary._print_to_console` / `_print_diff`
-- `to_dict()` method on `Digest` via `dataclasses.asdict()`
-- `to_json()` convenience method
+**Add** (above the `Summary` class):
 
-### 2. [diffly/comparison.py](diffly/comparison.py) (~line 976)
+- `SummaryData` and child dataclass definitions
+- `_to_python(value)` helper for JSON-safe conversion (date → isoformat, timedelta → total_seconds, Decimal → float)
+- `_compute_summary_data(comparison, **params) -> SummaryData`: single place for data extraction, parameter validation, and "what to show" decisions. This moves the current validation logic out of `Summary.__init__` and the data-querying logic out of the `_print_*` methods.
 
-- Add `digest()` method on `DataFrameComparison` with same signature as `summary()`
-- Lazy import `from .digest import Digest` (same pattern as summary)
+**Modify** `Summary`:
 
-### 3. [diffly/cli.py](diffly/cli.py)
+- `__init__` calls `_compute_summary_data()`, stores result as `self._data`. Remove `self._comparison` and parameter fields that are now captured in `SummaryData`.
+- Keep `self.slim` (controls header panel rendering, not data content).
+- Add `to_json(**kwargs) -> str` method delegating to `self._data.to_json()`.
+- Refactor each `_print_*` method to render from `self._data`:
+  - `_print_to_console`: check `self._data.equal`
+  - `_print_equal`: derive "empty but matching" from `self._data`
+  - `_print_primary_key`: read `self._data.primary_key`
+  - `_print_schemas`: render from `self._data.schemas` (skip if `None`)
+  - `_print_rows`: render from `self._data.rows` (skip if `None`)
+  - `_print_columns`: render from `self._data.columns` (skip if `None`)
+  - `_print_sample_rows_only_one_side`: render from `self._data.sample_rows_{left,right}_only`
+- Remove runtime imports of `DataFrameComparison` and `Schemas` (no longer needed for rendering)
 
-- Add `--json` flag (bool, default False)
-- When True, call `comparison.digest(...).to_json()` instead of `comparison.summary(...).format()`
+### 2. `diffly/comparison.py`
 
-### 4. [diffly/**init**.py](diffly/__init__.py)
+- No changes. `summary()` continues to return `Summary` with the same signature.
 
-- No changes needed -- `Digest` is accessed via `comparison.digest()`, not imported directly. Can revisit later.
+### 3. `diffly/cli.py`
 
-### 5. **No changes to** [diffly/testing.py](diffly/testing.py)
+- Add `--json` flag (bool, default False).
+- When True, call `comparison.summary(...).to_json()` instead of `comparison.summary(...).format()`.
 
-- `testing.py` uses `summary()` for human-readable assertion error messages. `digest()` is a data output format, not relevant to assertions.
+### 4. New: `tests/test_summary_data.py`
 
-### 6. New: [tests/test_digest.py](tests/test_digest.py)
+- Parametrized test over `show_perfect_column_matches`, `top_k_column_changes`, `slim`, `sample_k_rows_only` (with derived `sample_pk`) using `itertools.product`.
+- Single rich test case where all `SummaryData` fields are populated; assert correct fields are `None` vs populated per parameter combination.
+- Additional tests: equal frames, no primary key, hidden columns, multiple PK, slim suppression, validation errors.
+- JSON roundtrip via `json.loads(summary.to_json())`.
 
-- Equal frames -> `equal=True`, all sections `None`
-- Schema differences (left-only, right-only, dtype mismatches in in_common)
-- Row counts with and without primary key
-- Column match rates with `show_perfect_column_matches=True/False`
-- `top_k_column_changes` + `show_sample_primary_key_per_change`
-- `sample_k_rows_only` for `sample_rows_left_only` / `sample_rows_right_only`
-- `slim=True` suppresses matching sections
-- `hidden_columns` hides column changes
-- Validation errors (same as Summary: hidden PK columns, sample PK without top-k)
-- JSON serialization roundtrip: `json.loads(digest.to_json())` is valid
+### 5. No changes to `diffly/__init__.py` or `diffly/testing.py`
 
 ## Verification
 
 ```bash
-pixi run pytest tests/test_digest.py -v
+pixi run pytest tests/test_summary_data.py -v
 pixi run test
 pixi run pre-commit-run
 ```
+
+Existing summary fixture tests must continue to pass unchanged — they validate that the Rich rendering is identical before and after the refactor.
