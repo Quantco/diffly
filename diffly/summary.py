@@ -40,9 +40,9 @@ MAX_STRING_LENGTH: int | None = 128
 
 @dataclass
 class SummaryDataSchemas:
-    left_only: list[tuple[str, str]]
+    left_only: list[str]
     in_common: list[tuple[str, str, str]]
-    right_only: list[tuple[str, str]]
+    right_only: list[str]
     _equal: bool = field(default=False, repr=False)
     _mismatching_dtypes: list[tuple[str, str, str]] = field(
         default_factory=list, repr=False
@@ -59,6 +59,7 @@ class SummaryDataRows:
     n_right_only: int | None
     _equal_rows: bool = field(default=False, repr=False)
     _equal_num_rows: bool = field(default=False, repr=False)
+    _show_row_counts: bool = field(default=True, repr=False)
 
 
 @dataclass
@@ -80,9 +81,6 @@ class SummaryDataColumn:
 @dataclass
 class SummaryData:
     equal: bool
-    n_rows_left: int
-    slim: bool
-    show_perfect_column_matches: bool
     left_name: str
     right_name: str
     primary_key: list[str] | None
@@ -91,6 +89,10 @@ class SummaryData:
     columns: list[SummaryDataColumn] | None
     sample_rows_left_only: list[tuple[Any, ...]] | None
     sample_rows_right_only: list[tuple[Any, ...]] | None
+    _n_rows_left: int = field(default=0, repr=False)
+    _show_header: bool = field(default=True, repr=False)
+    _show_primary_key_section: bool = field(default=True, repr=False)
+    _has_common_columns: bool = field(default=False, repr=False)
     _truncated_left_name: str = field(default="", repr=False)
     _truncated_right_name: str = field(default="", repr=False)
 
@@ -180,9 +182,6 @@ def _compute_summary_data(
     if is_equal:
         return SummaryData(
             equal=True,
-            n_rows_left=n_rows_left,
-            slim=slim,
-            show_perfect_column_matches=show_perfect_column_matches,
             left_name=left_name,
             right_name=right_name,
             primary_key=comp.primary_key,
@@ -191,6 +190,10 @@ def _compute_summary_data(
             columns=None,
             sample_rows_left_only=None,
             sample_rows_right_only=None,
+            _n_rows_left=n_rows_left,
+            _show_header=not slim,
+            _show_primary_key_section=True,
+            _has_common_columns=bool(comp._other_common_columns),
             _truncated_left_name=truncated_left,
             _truncated_right_name=truncated_right,
         )
@@ -200,17 +203,15 @@ def _compute_summary_data(
     schemas_obj = comp.schemas
     schemas_equal = schemas_obj.equal()
     if not slim or not schemas_equal:
-        left_only_cols = sorted(schemas_obj.left_only().items())
-        right_only_cols = sorted(schemas_obj.right_only().items())
         in_common = sorted(schemas_obj.in_common().items())
         mismatching = sorted(schemas_obj.in_common().mismatching_dtypes().items())
         schemas = SummaryDataSchemas(
-            left_only=[(name, str(dtype)) for name, dtype in left_only_cols],
+            left_only=sorted(schemas_obj.left_only().column_names()),
             in_common=[
                 (name, str(left_dtype), str(right_dtype))
                 for name, (left_dtype, right_dtype) in in_common
             ],
-            right_only=[(name, str(dtype)) for name, dtype in right_only_cols],
+            right_only=sorted(schemas_obj.right_only().column_names()),
             _equal=schemas_equal,
             _mismatching_dtypes=[
                 (name, str(left_dtype), str(right_dtype))
@@ -236,6 +237,7 @@ def _compute_summary_data(
                 n_right_only=comp.num_rows_right_only(),
                 _equal_rows=comp._equal_rows(),
                 _equal_num_rows=comp.equal_num_rows(),
+                _show_row_counts=not (comp.equal_num_rows() and slim),
             )
         else:
             rows = SummaryDataRows(
@@ -247,6 +249,7 @@ def _compute_summary_data(
                 n_right_only=None,
                 _equal_rows=False,
                 _equal_num_rows=comp.equal_num_rows(),
+                _show_row_counts=True,
             )
 
     # --- Columns ---
@@ -254,6 +257,7 @@ def _compute_summary_data(
     match_rates_can_be_computed = (
         comp.primary_key is not None and comp.num_rows_joined() > 0
     )
+    has_common_columns = bool(comp._other_common_columns)
     if match_rates_can_be_computed:
         match_rates = comp.fraction_same()
         all_match = not comp._other_common_columns or min(match_rates.values()) >= 1
@@ -261,6 +265,8 @@ def _compute_summary_data(
             columns = []
             for col_name in sorted(match_rates):
                 rate = match_rates[col_name]
+                if not show_perfect_column_matches and rate >= 1:
+                    continue
                 top_k = top_k_changes_by_column[col_name]
                 changes: list[SummaryDataColumnChange] | None = None
                 n_total_changes = 0
@@ -318,9 +324,6 @@ def _compute_summary_data(
 
     return SummaryData(
         equal=False,
-        n_rows_left=n_rows_left,
-        slim=slim,
-        show_perfect_column_matches=show_perfect_column_matches,
         left_name=left_name,
         right_name=right_name,
         primary_key=comp.primary_key,
@@ -329,6 +332,10 @@ def _compute_summary_data(
         columns=columns,
         sample_rows_left_only=sample_rows_left_only,
         sample_rows_right_only=sample_rows_right_only,
+        _n_rows_left=n_rows_left,
+        _show_header=not slim,
+        _show_primary_key_section=not slim or comp.primary_key is None,
+        _has_common_columns=has_common_columns,
         _truncated_left_name=truncated_left,
         _truncated_right_name=truncated_right,
     )
@@ -414,7 +421,7 @@ class Summary:
     # -------------------------------------------------------------------------------- #
 
     def _print_to_console(self, console: Console) -> None:
-        if not self._data.slim:
+        if self._data._show_header:
             console.print(
                 Panel(
                     Text("Diffly Summary", style="bold", justify="center"),
@@ -427,7 +434,7 @@ class Summary:
             self._print_diff(console)
 
     def _print_equal(self, console: Console) -> None:
-        if self._data.n_rows_left == 0:
+        if self._data._n_rows_left == 0:
             message = "--- Data frames are empty, but their schema matches exactly! ---"
         else:
             message = "--- Data frames match exactly! ---"
@@ -446,8 +453,8 @@ class Summary:
     # --------------------------------- PRIMARY KEY ---------------------------------- #
 
     def _print_primary_key(self, console: Console) -> None:
-        if (primary_key := self._data.primary_key) is not None:
-            content = self._section_primary_key(primary_key)
+        if self._data.primary_key is not None:
+            content = self._section_primary_key()
         else:
             content = Text(
                 "Attention: the data frames do not match exactly, but as no primary"
@@ -455,13 +462,13 @@ class Summary:
                 " computed.",
                 style="italic",
             )
-        # NOTE: The primary key is only displayed in the default mode. If a primary
-        # key was not supplied, the warning is displayed in both modes.
-        if not self._data.slim or primary_key is None:
+        if self._data._show_primary_key_section:
             console.print(Padding(content, pad=(0, 3)))
             console.print("")
 
-    def _section_primary_key(self, primary_key: list[str]) -> RenderableType:
+    def _section_primary_key(self) -> RenderableType:
+        primary_key = self._data.primary_key
+        assert primary_key is not None
         return Group(
             f"Primary key: {', '.join(_format_colname(col) for col in primary_key)}"
         )
@@ -469,10 +476,10 @@ class Summary:
     # ------------------------------------ SCHEMA ------------------------------------ #
 
     def _print_schemas(self, console: Console) -> None:
-        if self._data.schemas is None:
+        schemas = self._data.schemas
+        if schemas is None:
             return
 
-        schemas = self._data.schemas
         content: RenderableType
         if schemas._equal:
             num_cols = len(schemas.in_common)
@@ -480,18 +487,21 @@ class Summary:
                 f"Schemas match exactly (column count: {num_cols:,}).", style="italic"
             )
         else:
-            content = self._section_schemas(schemas)
+            content = self._section_schemas()
 
         _print_section(console, "Schemas", content)
 
-    def _section_schemas(self, schemas: SummaryDataSchemas) -> RenderableType:
+    def _section_schemas(self) -> RenderableType:
+        schemas = self._data.schemas
+        assert schemas is not None
+
         def _print_num_columns(n: int) -> str:
             return f"{n:,} column{'s' if n != 1 else ''}"
 
         table = Table()
 
-        left_only_names = {name for name, _ in schemas.left_only}
-        right_only_names = {name for name, _ in schemas.right_only}
+        left_only_names = set(schemas.left_only)
+        right_only_names = set(schemas.right_only)
         max_column_width = max(
             len(column) for column in left_only_names | right_only_names | {""}
         )
@@ -530,21 +540,23 @@ class Summary:
         )
         num_in_common = len(schemas.in_common)
         table_data[in_common_header] = []
-        mismatching = schemas._mismatching_dtypes
-        if len(mismatching) == 0:
+        common_but_mismatching = schemas._mismatching_dtypes
+        if len(common_but_mismatching) == 0:
             table_data[in_common_header] = ["..."]
             max_column_width = max(
                 max_column_width, len(table_data[in_common_header][0])
             )
         else:
-            for col, left_dtype, right_dtype in sorted(mismatching, key=lambda x: x[0]):
+            for col, left_dtype, right_dtype in sorted(
+                common_but_mismatching, key=lambda x: x[0]
+            ):
                 table_data[in_common_header].append(
                     f"{_format_colname(col)} [{left_dtype} -> {right_dtype}]"
                 )
                 max_column_width = max(
                     max_column_width, len(f"{col} [{left_dtype} -> {right_dtype}]")
                 )
-            num_remaining = num_in_common - len(mismatching)
+            num_remaining = num_in_common - len(common_but_mismatching)
             if num_remaining > 0:
                 table_data[in_common_header].append(
                     f"(+{_print_num_columns(num_remaining)} with matching "
@@ -586,15 +598,16 @@ class Summary:
         if self._data.rows is None:
             return
 
-        rows = self._data.rows
         content: RenderableType
         if self._data.primary_key is None:
-            content = self._render_rows_without_primary_key(rows)
+            content = self._render_rows_without_primary_key()
         else:
-            content = self._render_rows_with_primary_key(rows)
+            content = self._render_rows_with_primary_key()
         _print_section(console, "Rows", content)
 
-    def _render_rows_without_primary_key(self, rows: SummaryDataRows) -> RenderableType:
+    def _render_rows_without_primary_key(self) -> RenderableType:
+        rows = self._data.rows
+        assert rows is not None
         content: RenderableType
         if rows._equal_num_rows:
             content = Text(
@@ -602,10 +615,12 @@ class Summary:
                 style="italic",
             )
         else:
-            content = self._section_row_counts(rows)
+            content = self._section_row_counts()
         return content
 
-    def _render_rows_with_primary_key(self, rows: SummaryDataRows) -> RenderableType:
+    def _render_rows_with_primary_key(self) -> RenderableType:
+        rows = self._data.rows
+        assert rows is not None
         assert rows.n_joined_equal is not None
         assert rows.n_joined_unequal is not None
         assert rows.n_left_only is not None
@@ -618,19 +633,19 @@ class Summary:
                 style="italic",
             )
         else:
-            # NOTE: In slim mode, we omit the row counts section and only show the
-            # row matches section.
-            if rows._equal_num_rows and self._data.slim:
-                content = Group(self._section_row_matches(rows))
+            if not rows._show_row_counts:
+                content = Group(self._section_row_matches())
             else:
                 content = Group(
-                    self._section_row_counts(rows),
+                    self._section_row_counts(),
                     "",
-                    self._section_row_matches(rows),
+                    self._section_row_matches(),
                 )
         return content
 
-    def _section_row_counts(self, rows: SummaryDataRows) -> RenderableType:
+    def _section_row_counts(self) -> RenderableType:
+        rows = self._data.rows
+        assert rows is not None
         gain_loss = ""
         if rows.n_left > 0:
             fraction_rows_right = rows.n_right / rows.n_left
@@ -659,7 +674,9 @@ class Summary:
 
         return Group(*count_rows)
 
-    def _section_row_matches(self, rows: SummaryDataRows) -> RenderableType:
+    def _section_row_matches(self) -> RenderableType:
+        rows = self._data.rows
+        assert rows is not None
         assert rows.n_left_only is not None
         assert rows.n_joined_equal is not None
         assert rows.n_joined_unequal is not None
@@ -813,76 +830,65 @@ class Summary:
         columns = self._data.columns
         assert columns is not None
 
-        if not columns:
+        if not self._data._has_common_columns:
             display_items.append(
                 Text("No common non-primary key columns to compare.", style="italic")
             )
+        elif not columns:
+            display_items.append(Text("All columns match perfectly.", style="italic"))
         else:
-            visible = [
-                c
-                for c in columns
-                if self._data.show_perfect_column_matches or c.match_rate < 1
-            ]
-            if not visible:
-                display_items.append(
-                    Text("All columns match perfectly.", style="italic")
-                )
-            else:
-                matches = Table(show_header=False)
-                matches.add_column(
-                    "Column",
-                    max_width=COLUMN_SECTION_COLUMN_WIDTH,
-                    overflow=OVERFLOW,
-                )
-                matches.add_column("Match Rate", justify="right")
-                has_top_changes_column = any(
-                    c.changes is not None for c in columns if c.match_rate < 1
-                )
-                if has_top_changes_column:
-                    matches.add_column("Top Changes", justify="right")
-                max_col_len = max(len(c.name) for c in visible)
-                for col in visible:
-                    row_items: list[RenderableType] = [
-                        Text(col.name, style="cyan"),
-                        f"{_format_fraction_as_percentage(col.match_rate)}",
-                    ]
-                    if col.changes is not None:
-                        change_lines = []
-                        for change in col.changes:
-                            line = (
-                                f"{_format_value(change.old)} -> "
-                                f"{_format_value(change.new)} ({change.count:,}x"
-                            )
-                            if change.sample_pk is not None:
-                                line += ", e.g. "
-                                if len(change.sample_pk) == 1:
-                                    line += _format_value(change.sample_pk[0])
-                                else:
-                                    line += "("
-                                    line += ", ".join(
-                                        [_format_value(v) for v in change.sample_pk]
-                                    )
-                                    line += ")"
-                            line += ")"
-                            change_lines.append(line)
+            matches = Table(show_header=False)
+            matches.add_column(
+                "Column",
+                max_width=COLUMN_SECTION_COLUMN_WIDTH,
+                overflow=OVERFLOW,
+            )
+            matches.add_column("Match Rate", justify="right")
+            has_top_changes_column = any(
+                c.changes is not None for c in columns if c.match_rate < 1
+            )
+            if has_top_changes_column:
+                matches.add_column("Top Changes", justify="right")
+            max_col_len = max(len(c.name) for c in columns)
+            for col in columns:
+                row_items: list[RenderableType] = [
+                    Text(col.name, style="cyan"),
+                    f"{_format_fraction_as_percentage(col.match_rate)}",
+                ]
+                if col.changes is not None:
+                    change_lines = []
+                    for change in col.changes:
+                        line = (
+                            f"{_format_value(change.old)} -> "
+                            f"{_format_value(change.new)} ({change.count:,}x"
+                        )
+                        if change.sample_pk is not None:
+                            line += ", e.g. "
+                            if len(change.sample_pk) == 1:
+                                line += _format_value(change.sample_pk[0])
+                            else:
+                                line += "("
+                                line += ", ".join(
+                                    [_format_value(v) for v in change.sample_pk]
+                                )
+                                line += ")"
+                        line += ")"
+                        change_lines.append(line)
 
-                        remaining_count = col.n_total_changes - len(col.changes)
-                        if remaining_count > 0:
-                            change_lines.append(
-                                f"(...and {remaining_count:,} {('other' if remaining_count == 1 else 'others')})"
-                            )
+                    remaining_count = col.n_total_changes - len(col.changes)
+                    if remaining_count > 0:
+                        change_lines.append(
+                            f"(...and {remaining_count:,} {('other' if remaining_count == 1 else 'others')})"
+                        )
 
-                        text = "\n".join(change_lines)
-                        row_items.append(text)
+                    text = "\n".join(change_lines)
+                    row_items.append(text)
 
-                    matches.add_row(*row_items)
-                    if (
-                        has_top_changes_column
-                        or max_col_len > COLUMN_SECTION_COLUMN_WIDTH
-                    ):
-                        matches.add_section()
+                matches.add_row(*row_items)
+                if has_top_changes_column or max_col_len > COLUMN_SECTION_COLUMN_WIDTH:
+                    matches.add_section()
 
-                display_items.append(matches)
+            display_items.append(matches)
 
         return Group(*display_items)
 
@@ -901,14 +907,17 @@ class Summary:
             _print_section(
                 console,
                 f"Rows {name} only",
-                self._section_rows_only_one_side(sample_rows, primary_key),
+                self._section_rows_only_one_side(side),
             )
 
-    def _section_rows_only_one_side(
-        self,
-        sample_rows: list[tuple[Any, ...]],
-        primary_key: list[str],
-    ) -> RenderableType:
+    def _section_rows_only_one_side(self, side: Side) -> RenderableType:
+        if side == Side.LEFT:
+            sample_rows = self._data.sample_rows_left_only
+        else:
+            sample_rows = self._data.sample_rows_right_only
+        assert sample_rows is not None
+        primary_key = self._data.primary_key
+        assert primary_key is not None
         table = Table()
         for col in primary_key[:MAX_DISPLAYED_COLUMNS_IN_SAMPLE_TABLES]:
             table.add_column(col, overflow="ellipsis")
