@@ -76,8 +76,8 @@ def test_summary_data_parametrized(
         assert data.schemas is None
     else:
         assert isinstance(data.schemas, SummaryDataSchemas)
-        assert len(data.schemas.left_only) > 0  # left_col
-        assert len(data.schemas.right_only) > 0  # right_col
+        assert len(data.schemas.left_only_names) > 0  # left_col
+        assert len(data.schemas.right_only_names) > 0  # right_col
 
     # --- Rows ---
     rows_equal = comp._equal_rows()

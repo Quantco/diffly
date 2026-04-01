@@ -40,9 +40,9 @@ MAX_STRING_LENGTH: int | None = 128
 
 @dataclass
 class SummaryDataSchemas:
-    left_only: list[str]
+    left_only_names: list[str]
     in_common: list[tuple[str, str, str]]
-    right_only: list[str]
+    right_only_names: list[str]
     _equal: bool = field(default=False, repr=False)
     _mismatching_dtypes: list[tuple[str, str, str]] = field(
         default_factory=list, repr=False
@@ -81,18 +81,16 @@ class SummaryDataColumn:
 @dataclass
 class SummaryData:
     equal: bool
-    left_name: str
-    right_name: str
+    left_name: str | None
+    right_name: str | None
     primary_key: list[str] | None
     schemas: SummaryDataSchemas | None
     rows: SummaryDataRows | None
     columns: list[SummaryDataColumn] | None
     sample_rows_left_only: list[tuple[Any, ...]] | None
     sample_rows_right_only: list[tuple[Any, ...]] | None
-    _n_rows_left: int = field(default=0, repr=False)
-    _show_header: bool = field(default=True, repr=False)
-    _show_primary_key_section: bool = field(default=True, repr=False)
-    _has_common_columns: bool = field(default=False, repr=False)
+    _is_empty: bool = field(default=False, repr=False)
+    _other_common_columns: list[str] = field(default_factory=list, repr=False)
     _truncated_left_name: str = field(default="", repr=False)
     _truncated_right_name: str = field(default="", repr=False)
 
@@ -174,7 +172,7 @@ def _compute_summary_data(
     )
 
     is_equal = comp.equal()
-    n_rows_left = comp.num_rows_left()
+    is_empty = comp.num_rows_left() == 0
 
     truncated_left = _truncate_name(left_name)
     truncated_right = _truncate_name(right_name)
@@ -182,37 +180,34 @@ def _compute_summary_data(
     if is_equal:
         return SummaryData(
             equal=True,
-            left_name=left_name,
-            right_name=right_name,
-            primary_key=comp.primary_key,
+            left_name=None,
+            right_name=None,
+            primary_key=None,
             schemas=None,
             rows=None,
             columns=None,
             sample_rows_left_only=None,
             sample_rows_right_only=None,
-            _n_rows_left=n_rows_left,
-            _show_header=not slim,
-            _show_primary_key_section=True,
-            _has_common_columns=bool(comp._other_common_columns),
+            _is_empty=is_empty,
+            _other_common_columns=comp._other_common_columns,
             _truncated_left_name=truncated_left,
             _truncated_right_name=truncated_right,
         )
 
     # --- Schemas ---
     schemas: SummaryDataSchemas | None = None
-    schemas_obj = comp.schemas
-    schemas_equal = schemas_obj.equal()
-    if not slim or not schemas_equal:
-        in_common = sorted(schemas_obj.in_common().items())
-        mismatching = sorted(schemas_obj.in_common().mismatching_dtypes().items())
+    # NOTE: In slim mode, we only print the section if there are differences.
+    if not slim or not comp.schemas.equal():
+        in_common = sorted(comp.schemas.in_common().items())
+        mismatching = sorted(comp.schemas.in_common().mismatching_dtypes().items())
         schemas = SummaryDataSchemas(
-            left_only=sorted(schemas_obj.left_only().column_names()),
+            left_only_names=sorted(comp.schemas.left_only().column_names()),
             in_common=[
                 (name, str(left_dtype), str(right_dtype))
                 for name, (left_dtype, right_dtype) in in_common
             ],
-            right_only=sorted(schemas_obj.right_only().column_names()),
-            _equal=schemas_equal,
+            right_only_names=sorted(comp.schemas.right_only().column_names()),
+            _equal=comp.schemas.equal(),
             _mismatching_dtypes=[
                 (name, str(left_dtype), str(right_dtype))
                 for name, (left_dtype, right_dtype) in mismatching
@@ -221,13 +216,12 @@ def _compute_summary_data(
 
     # --- Rows ---
     rows: SummaryDataRows | None = None
-    has_pk = comp.primary_key is not None
-    if has_pk:
+    if comp.primary_key is not None:
         rows_equal = comp._equal_rows()
     else:
         rows_equal = comp.equal_num_rows()
     if not slim or not rows_equal:
-        if has_pk:
+        if comp.primary_key is not None:
             rows = SummaryDataRows(
                 n_left=comp.num_rows_left(),
                 n_right=comp.num_rows_right(),
@@ -257,11 +251,9 @@ def _compute_summary_data(
     match_rates_can_be_computed = (
         comp.primary_key is not None and comp.num_rows_joined() > 0
     )
-    has_common_columns = bool(comp._other_common_columns)
     if match_rates_can_be_computed:
         match_rates = comp.fraction_same()
-        all_match = not comp._other_common_columns or min(match_rates.values()) >= 1
-        if not slim or not all_match:
+        if not slim or (comp._other_common_columns and min(match_rates.values()) < 1):
             columns = []
             for col_name in sorted(match_rates):
                 rate = match_rates[col_name]
@@ -304,7 +296,7 @@ def _compute_summary_data(
     # --- Sample rows left/right only ---
     sample_rows_left_only: list[tuple[Any, ...]] | None = None
     sample_rows_right_only: list[tuple[Any, ...]] | None = None
-    if has_pk and sample_k_rows_only > 0:
+    if comp.primary_key is not None and sample_k_rows_only > 0:
         pk = comp.primary_key
         assert isinstance(pk, list)
 
@@ -332,10 +324,8 @@ def _compute_summary_data(
         columns=columns,
         sample_rows_left_only=sample_rows_left_only,
         sample_rows_right_only=sample_rows_right_only,
-        _n_rows_left=n_rows_left,
-        _show_header=not slim,
-        _show_primary_key_section=not slim or comp.primary_key is None,
-        _has_common_columns=has_common_columns,
+        _is_empty=is_empty,
+        _other_common_columns=comp._other_common_columns,
         _truncated_left_name=truncated_left,
         _truncated_right_name=truncated_right,
     )
@@ -367,6 +357,7 @@ class Summary:
         slim: bool,
         hidden_columns: list[str] | None,
     ):
+        self.slim = slim
         self._data = _compute_summary_data(
             comparison,
             show_perfect_column_matches=show_perfect_column_matches,
@@ -421,7 +412,7 @@ class Summary:
     # -------------------------------------------------------------------------------- #
 
     def _print_to_console(self, console: Console) -> None:
-        if self._data._show_header:
+        if not self.slim:
             console.print(
                 Panel(
                     Text("Diffly Summary", style="bold", justify="center"),
@@ -434,7 +425,7 @@ class Summary:
             self._print_diff(console)
 
     def _print_equal(self, console: Console) -> None:
-        if self._data._n_rows_left == 0:
+        if self._data._is_empty:
             message = "--- Data frames are empty, but their schema matches exactly! ---"
         else:
             message = "--- Data frames match exactly! ---"
@@ -453,7 +444,7 @@ class Summary:
     # --------------------------------- PRIMARY KEY ---------------------------------- #
 
     def _print_primary_key(self, console: Console) -> None:
-        if self._data.primary_key is not None:
+        if (primary_key := self._data.primary_key) is not None:
             content = self._section_primary_key()
         else:
             content = Text(
@@ -462,7 +453,7 @@ class Summary:
                 " computed.",
                 style="italic",
             )
-        if self._data._show_primary_key_section:
+        if not self.slim or primary_key is None:
             console.print(Padding(content, pad=(0, 3)))
             console.print("")
 
@@ -500,8 +491,8 @@ class Summary:
 
         table = Table()
 
-        left_only_names = set(schemas.left_only)
-        right_only_names = set(schemas.right_only)
+        left_only_names = set(schemas.left_only_names)
+        right_only_names = set(schemas.right_only_names)
         max_column_width = max(
             len(column) for column in left_only_names | right_only_names | {""}
         )
@@ -830,7 +821,7 @@ class Summary:
         columns = self._data.columns
         assert columns is not None
 
-        if not self._data._has_common_columns:
+        if not self._data._other_common_columns:
             display_items.append(
                 Text("No common non-primary key columns to compare.", style="italic")
             )
