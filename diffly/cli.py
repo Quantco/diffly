@@ -110,6 +110,16 @@ def main(
             )
         ),
     ] = False,
+    output_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help=(
+                "Output a machine-readable JSON digest instead of a rich-formatted "
+                "summary."
+            ),
+        ),
+    ] = False,
     hidden_columns: Annotated[
         list[str],
         typer.Option(
@@ -130,18 +140,20 @@ def main(
         rel_tol=rel_tol,
         abs_tol_temporal=dt.timedelta(seconds=abs_tol_temporal),
     )
-    typer.echo(
-        comparison.summary(
-            show_perfect_column_matches=show_perfect_column_matches,
-            top_k_column_changes=top_k_column_changes,
-            sample_k_rows_only=sample_k_rows_only,
-            show_sample_primary_key_per_change=show_sample_primary_key_per_change,
-            left_name=left_name,
-            right_name=right_name,
-            slim=slim,
-            hidden_columns=hidden_columns,
-        ).format(pretty=True)
+    summary = comparison.summary(
+        show_perfect_column_matches=show_perfect_column_matches,
+        top_k_column_changes=top_k_column_changes,
+        sample_k_rows_only=sample_k_rows_only,
+        show_sample_primary_key_per_change=show_sample_primary_key_per_change,
+        left_name=left_name,
+        right_name=right_name,
+        slim=slim,
+        hidden_columns=hidden_columns,
     )
+    if output_json:
+        typer.echo(summary.to_json())
+    else:
+        typer.echo(summary.format(pretty=True))
 
 
 if __name__ == "__main__":  # pragma: no cover

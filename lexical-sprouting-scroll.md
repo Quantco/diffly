@@ -36,11 +36,11 @@ class SummaryData:
     left_name: str
     right_name: str
     primary_key: list[str] | None
-    schemas: SummaryDataSchemas | None       # None when equal, or slim + schemas match
-    rows: SummaryDataRows | None             # None when equal, or slim + rows match
-    columns: list[SummaryDataColumn] | None  # None when equal, no PK, no joined rows, or slim + all match
+    schemas: SummaryDataSchemas | None
+    rows: SummaryDataRows | None
+    columns: list[SummaryDataColumn] | None
     sample_rows_left_only: list[tuple[Any, ...]] | None   # None when no PK or sample_k==0
-    sample_rows_right_only: list[tuple[Any, ...]] | None
+    sample_rows_right_only: list[tuple[Any, ...]] | None # None when no PK or sample_k==0
 
     def to_dict(self) -> dict[str, Any]: ...
     def to_json(self, **kwargs) -> str: ...
@@ -56,9 +56,9 @@ class SummaryDataRows:
     n_left: int
     n_right: int
     n_left_only: int | None       # None when no primary key
-    n_joined_equal: int | None
-    n_joined_unequal: int | None
-    n_right_only: int | None
+    n_joined_equal: int | None  # None when no primary key
+    n_joined_unequal: int | None  # None when no primary key
+    n_right_only: int | None  # None when no primary key
 
 @dataclass
 class SummaryDataColumn:
@@ -78,9 +78,8 @@ class SummaryDataColumnChange:
 ### Design decisions
 
 - **Primary key consistency:** Both `sample_rows_{left,right}_only` entries and `sample_pk` in `SummaryDataColumnChange` use `tuple[Any, ...]` matching the `primary_key` column order.
-- **None logic:** `schemas` is `None` when equal, or when `slim=True` and schemas match. Same pattern for `rows` and `columns`.
 - **`n_total_changes`** on `SummaryDataColumn`: needed to render `"(...and 5 others)"`. The `changes` list only holds the top-k.
-- **Equal + empty frames:** Summary distinguishes "empty but matching" from "match exactly" via row count. When `equal=True`, `rows` is `None`. _Alternative:_ add a top-level `n_rows_left` field if this proves awkward during implementation.
+- **Equal + empty frames:** Summary distinguishes "empty but matching" from "match exactly" via row count. _Alternative:_ add a top-level `n_rows_left` field if this proves awkward during implementation.
 
 ## Files to modify
 
