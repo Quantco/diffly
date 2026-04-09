@@ -6,7 +6,7 @@ from __future__ import annotations
 import dataclasses
 import io
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Literal, cast
@@ -31,313 +31,6 @@ CUSTOM_COLUMN_NAME_MAX_LENGTH = 15
 OVERFLOW: Literal["crop", "fold", "ellipsis"] = "fold"
 MAX_DISPLAYED_COLUMNS_IN_SAMPLE_TABLES = 5
 MAX_STRING_LENGTH: int | None = 128
-
-
-# ---------------------------------------------------------------------------- #
-#                                 SUMMARY DATA                                 #
-# ---------------------------------------------------------------------------- #
-
-
-@dataclass
-class SummaryDataSchemas:
-    left_only_names: list[str]
-    in_common: list[tuple[str, str, str]]
-    right_only_names: list[str]
-    _equal: bool = field(default=False, repr=False)
-    _mismatching_dtypes: list[tuple[str, str, str]] = field(
-        default_factory=list, repr=False
-    )
-
-
-@dataclass
-class SummaryDataRows:
-    n_left: int
-    n_right: int
-    n_left_only: int | None
-    n_joined_equal: int | None
-    n_joined_unequal: int | None
-    n_right_only: int | None
-    _equal_rows: bool = field(default=False, repr=False)
-    _equal_num_rows: bool = field(default=False, repr=False)
-    _show_row_counts: bool = field(default=True, repr=False)
-
-
-@dataclass
-class SummaryDataColumnChange:
-    old: Any
-    new: Any
-    count: int
-    sample_pk: tuple[Any, ...] | None
-
-
-@dataclass
-class SummaryDataColumn:
-    name: str
-    match_rate: float
-    n_total_changes: int
-    changes: list[SummaryDataColumnChange] | None
-
-
-@dataclass
-class SummaryData:
-    equal: bool
-    left_name: str | None
-    right_name: str | None
-    primary_key: list[str] | None
-    schemas: SummaryDataSchemas | None
-    rows: SummaryDataRows | None
-    columns: list[SummaryDataColumn] | None
-    sample_rows_left_only: list[tuple[Any, ...]] | None
-    sample_rows_right_only: list[tuple[Any, ...]] | None
-    _is_empty: bool = field(default=False, repr=False)
-    _other_common_columns: list[str] = field(default_factory=list, repr=False)
-    _truncated_left_name: str = field(default="", repr=False)
-    _truncated_right_name: str = field(default="", repr=False)
-
-    def to_dict(self) -> dict[str, Any]:
-        def _convert(obj: Any) -> Any:
-            if isinstance(obj, dict):
-                return {k: _convert(v) for k, v in obj.items() if not k.startswith("_")}
-            if isinstance(obj, (list, tuple)):
-                return type(obj)(_convert(v) for v in obj)
-            return _to_python(obj)
-
-        return _convert(dataclasses.asdict(self))
-
-    def to_json(self, **kwargs: Any) -> str:
-        return json.dumps(self.to_dict(), **kwargs)
-
-
-def _to_python(value: Any) -> Any:
-    """Convert values to JSON-safe Python types."""
-    if isinstance(value, datetime):
-        return value.isoformat()
-    if isinstance(value, date):
-        return value.isoformat()
-    if isinstance(value, timedelta):
-        return value.total_seconds()
-    if isinstance(value, Decimal):
-        return float(value)
-    return value
-
-
-def _compute_summary_data(
-    comparison: DataFrameComparison,
-    show_perfect_column_matches: bool,
-    top_k_column_changes: int,
-    sample_k_rows_only: int,
-    show_sample_primary_key_per_change: bool,
-    left_name: str,
-    right_name: str,
-    slim: bool,
-    hidden_columns: list[str] | None,
-) -> SummaryData:
-    from .comparison import DataFrameComparison
-
-    hidden_columns = hidden_columns or []
-
-    def _validate_primary_key_hidden_columns() -> None:
-        overlap = sorted(
-            set(hidden_columns).intersection(set(comparison.primary_key or []))
-        )
-        if overlap and sample_k_rows_only > 0:
-            raise ValueError(
-                f"Cannot show sample rows only on the left or right side when primary"
-                f" key column(s) {', '.join(overlap)} should be hidden."
-            )
-        if overlap and show_sample_primary_key_per_change:
-            raise ValueError(
-                f"Cannot show sample primary key for changed columns when primary"
-                f" key column(s) {', '.join(overlap)} should be hidden."
-            )
-
-    _validate_primary_key_hidden_columns()
-    if top_k_column_changes == 0 and show_sample_primary_key_per_change:
-        raise ValueError(
-            "Cannot show sample primary key per change when top_k_column_changes is 0."
-        )
-
-    top_k_changes_by_column = {
-        col: 0 if col in hidden_columns else top_k_column_changes
-        for col in comparison._other_common_columns
-    }
-    comp = DataFrameComparison(
-        left=comparison.left.collect().lazy(),
-        right=comparison.right.collect().lazy(),
-        left_schema=comparison.left_schema,
-        right_schema=comparison.right_schema,
-        primary_key=comparison.primary_key,
-        _other_common_columns=comparison._other_common_columns,
-        abs_tol_by_column=comparison.abs_tol_by_column,
-        rel_tol_by_column=comparison.rel_tol_by_column,
-        abs_tol_temporal_by_column=comparison.abs_tol_temporal_by_column,
-    )
-
-    is_equal = comp.equal()
-    is_empty = comp.num_rows_left() == 0
-
-    truncated_left = _truncate_name(left_name)
-    truncated_right = _truncate_name(right_name)
-
-    if is_equal:
-        return SummaryData(
-            equal=True,
-            left_name=None,
-            right_name=None,
-            primary_key=None,
-            schemas=None,
-            rows=None,
-            columns=None,
-            sample_rows_left_only=None,
-            sample_rows_right_only=None,
-            _is_empty=is_empty,
-            _other_common_columns=comp._other_common_columns,
-            _truncated_left_name=truncated_left,
-            _truncated_right_name=truncated_right,
-        )
-
-    # --- Schemas ---
-    schemas: SummaryDataSchemas | None = None
-    # NOTE: In slim mode, we only print the section if there are differences.
-    if not slim or not comp.schemas.equal():
-        in_common = sorted(comp.schemas.in_common().items())
-        mismatching = sorted(comp.schemas.in_common().mismatching_dtypes().items())
-        schemas = SummaryDataSchemas(
-            left_only_names=sorted(comp.schemas.left_only().column_names()),
-            in_common=[
-                (name, str(left_dtype), str(right_dtype))
-                for name, (left_dtype, right_dtype) in in_common
-            ],
-            right_only_names=sorted(comp.schemas.right_only().column_names()),
-            _equal=comp.schemas.equal(),
-            _mismatching_dtypes=[
-                (name, str(left_dtype), str(right_dtype))
-                for name, (left_dtype, right_dtype) in mismatching
-            ],
-        )
-
-    # --- Rows ---
-    rows: SummaryDataRows | None = None
-    if comp.primary_key is not None:
-        rows_equal = comp._equal_rows()
-    else:
-        rows_equal = comp.equal_num_rows()
-    # NOTE: In slim mode, we only print the section if there are differences.
-    if not slim or not rows_equal:
-        if comp.primary_key is not None:
-            rows = SummaryDataRows(
-                n_left=comp.num_rows_left(),
-                n_right=comp.num_rows_right(),
-                n_left_only=comp.num_rows_left_only(),
-                n_joined_equal=comp.num_rows_joined_equal(),
-                n_joined_unequal=comp.num_rows_joined_unequal(),
-                n_right_only=comp.num_rows_right_only(),
-                _equal_rows=comp._equal_rows(),
-                _equal_num_rows=comp.equal_num_rows(),
-                # NOTE: In slim mode, we omit the row counts section and only show the
-                # row matches section.
-                _show_row_counts=not (comp.equal_num_rows() and slim),
-            )
-        else:
-            rows = SummaryDataRows(
-                n_left=comp.num_rows_left(),
-                n_right=comp.num_rows_right(),
-                n_left_only=None,
-                n_joined_equal=None,
-                n_joined_unequal=None,
-                n_right_only=None,
-                _equal_rows=False,
-                _equal_num_rows=comp.equal_num_rows(),
-                _show_row_counts=True,
-            )
-
-    # --- Columns ---
-    columns: list[SummaryDataColumn] | None = None
-    # NOTE: We can only compute column matches if there are primary key columns and at
-    # least one joined row.
-    match_rates_can_be_computed = (
-        comp.primary_key is not None and comp.num_rows_joined() > 0
-    )
-    if match_rates_can_be_computed:
-        match_rates = comp.fraction_same()
-        # NOTE: In slim mode, we only print the columns section if there are
-        # non-primary key columns and at least one column has a match rate < 1.
-        if not slim or (comp._other_common_columns and min(match_rates.values()) < 1):
-            columns = []
-            for col_name in sorted(match_rates):
-                rate = match_rates[col_name]
-                if not show_perfect_column_matches and rate >= 1:
-                    continue
-                top_k = top_k_changes_by_column[col_name]
-                changes: list[SummaryDataColumnChange] | None = None
-                n_total_changes = 0
-                if top_k > 0 and rate < 1:
-                    all_change_counts = comp.change_counts(
-                        col_name,
-                        include_sample_primary_key=show_sample_primary_key_per_change,
-                    )
-                    n_total_changes = len(all_change_counts)
-                    top_change_counts = all_change_counts.head(top_k)
-                    changes = []
-                    for row in top_change_counts.iter_rows(named=True):
-                        sample_pk: tuple[Any, ...] | None = None
-                        if show_sample_primary_key_per_change:
-                            pk_cols = comp.primary_key
-                            assert isinstance(pk_cols, list)
-                            sample_pk = tuple(row[f"sample_{c}"] for c in pk_cols)
-                        changes.append(
-                            SummaryDataColumnChange(
-                                old=row[Side.LEFT],
-                                new=row[Side.RIGHT],
-                                count=row["count"],
-                                sample_pk=sample_pk,
-                            )
-                        )
-                columns.append(
-                    SummaryDataColumn(
-                        name=col_name,
-                        match_rate=rate,
-                        n_total_changes=n_total_changes,
-                        changes=changes,
-                    )
-                )
-
-    # --- Sample rows left/right only ---
-    sample_rows_left_only: list[tuple[Any, ...]] | None = None
-    sample_rows_right_only: list[tuple[Any, ...]] | None = None
-    if comp.primary_key is not None and sample_k_rows_only > 0:
-        pk = comp.primary_key
-        assert isinstance(pk, list)
-
-        if comp.num_rows_left_only() > 0:
-            df = comp.left_only(lazy=True).select(pk).head(sample_k_rows_only).collect()
-            sample_rows_left_only = [tuple(row) for row in df.iter_rows()]
-        else:
-            sample_rows_left_only = []
-
-        if comp.num_rows_right_only() > 0:
-            df = (
-                comp.right_only(lazy=True).select(pk).head(sample_k_rows_only).collect()
-            )
-            sample_rows_right_only = [tuple(row) for row in df.iter_rows()]
-        else:
-            sample_rows_right_only = []
-
-    return SummaryData(
-        equal=False,
-        left_name=left_name,
-        right_name=right_name,
-        primary_key=comp.primary_key,
-        schemas=schemas,
-        rows=rows,
-        columns=columns,
-        sample_rows_left_only=sample_rows_left_only,
-        sample_rows_right_only=sample_rows_right_only,
-        _is_empty=is_empty,
-        _other_common_columns=comp._other_common_columns,
-        _truncated_left_name=truncated_left,
-        _truncated_right_name=truncated_right,
-    )
 
 
 # ---------------------------------------------------------------------------- #
@@ -933,6 +626,311 @@ class Summary:
             table.add_row(*added_row)
 
         return table
+
+
+# ---------------------------------------------------------------------------- #
+#                                 SUMMARY DATA                                 #
+# ---------------------------------------------------------------------------- #
+
+
+@dataclass
+class SummaryDataSchemas:
+    left_only_names: list[str]
+    in_common: list[tuple[str, str, str]]
+    right_only_names: list[str]
+    _equal: bool
+    _mismatching_dtypes: list[tuple[str, str, str]]
+
+
+@dataclass
+class SummaryDataRows:
+    n_left: int
+    n_right: int
+    n_left_only: int | None
+    n_joined_equal: int | None
+    n_joined_unequal: int | None
+    n_right_only: int | None
+    _equal_rows: bool
+    _equal_num_rows: bool
+    _show_row_counts: bool
+
+
+@dataclass
+class SummaryDataColumnChange:
+    old: Any
+    new: Any
+    count: int
+    sample_pk: tuple[Any, ...] | None
+
+
+@dataclass
+class SummaryDataColumn:
+    name: str
+    match_rate: float
+    n_total_changes: int
+    changes: list[SummaryDataColumnChange] | None
+
+
+@dataclass
+class SummaryData:
+    equal: bool
+    left_name: str | None
+    right_name: str | None
+    primary_key: list[str] | None
+    schemas: SummaryDataSchemas | None
+    rows: SummaryDataRows | None
+    columns: list[SummaryDataColumn] | None
+    sample_rows_left_only: list[tuple[Any, ...]] | None
+    sample_rows_right_only: list[tuple[Any, ...]] | None
+    _is_empty: bool
+    _other_common_columns: list[str]
+    _truncated_left_name: str
+    _truncated_right_name: str
+
+    def to_dict(self) -> dict[str, Any]:
+        def _convert(obj: Any) -> Any:
+            if isinstance(obj, dict):
+                return {k: _convert(v) for k, v in obj.items() if not k.startswith("_")}
+            if isinstance(obj, (list, tuple)):
+                return type(obj)(_convert(v) for v in obj)
+            return to_json_safe(obj)
+
+        return _convert(dataclasses.asdict(self))
+
+    def to_json(self, **kwargs: Any) -> str:
+        return json.dumps(self.to_dict(), **kwargs)
+
+
+def to_json_safe(value: Any) -> Any:
+    """Convert values to JSON-safe Python types."""
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, timedelta):
+        return value.total_seconds()
+    if isinstance(value, Decimal):
+        return float(value)
+    return value
+
+
+def _compute_summary_data(
+    comparison: DataFrameComparison,
+    show_perfect_column_matches: bool,
+    top_k_column_changes: int,
+    sample_k_rows_only: int,
+    show_sample_primary_key_per_change: bool,
+    left_name: str,
+    right_name: str,
+    slim: bool,
+    hidden_columns: list[str] | None,
+) -> SummaryData:
+    from .comparison import DataFrameComparison
+
+    hidden_columns = hidden_columns or []
+
+    def _validate_primary_key_hidden_columns() -> None:
+        overlap = sorted(
+            set(hidden_columns).intersection(set(comparison.primary_key or []))
+        )
+        if overlap and sample_k_rows_only > 0:
+            raise ValueError(
+                f"Cannot show sample rows only on the left or right side when primary"
+                f" key column(s) {', '.join(overlap)} should be hidden."
+            )
+        if overlap and show_sample_primary_key_per_change:
+            raise ValueError(
+                f"Cannot show sample primary key for changed columns when primary"
+                f" key column(s) {', '.join(overlap)} should be hidden."
+            )
+
+    _validate_primary_key_hidden_columns()
+    if top_k_column_changes == 0 and show_sample_primary_key_per_change:
+        raise ValueError(
+            "Cannot show sample primary key per change when top_k_column_changes is 0."
+        )
+
+    top_k_changes_by_column = {
+        col: 0 if col in hidden_columns else top_k_column_changes
+        for col in comparison._other_common_columns
+    }
+    comp = DataFrameComparison(
+        left=comparison.left.collect().lazy(),
+        right=comparison.right.collect().lazy(),
+        left_schema=comparison.left_schema,
+        right_schema=comparison.right_schema,
+        primary_key=comparison.primary_key,
+        _other_common_columns=comparison._other_common_columns,
+        abs_tol_by_column=comparison.abs_tol_by_column,
+        rel_tol_by_column=comparison.rel_tol_by_column,
+        abs_tol_temporal_by_column=comparison.abs_tol_temporal_by_column,
+    )
+
+    is_equal = comp.equal()
+    is_empty = comp.num_rows_left() == 0
+
+    truncated_left = _truncate_name(left_name)
+    truncated_right = _truncate_name(right_name)
+
+    if is_equal:
+        return SummaryData(
+            equal=True,
+            left_name=None,
+            right_name=None,
+            primary_key=None,
+            schemas=None,
+            rows=None,
+            columns=None,
+            sample_rows_left_only=None,
+            sample_rows_right_only=None,
+            _is_empty=is_empty,
+            _other_common_columns=comp._other_common_columns,
+            _truncated_left_name=truncated_left,
+            _truncated_right_name=truncated_right,
+        )
+
+    # --- Schemas ---
+    schemas: SummaryDataSchemas | None = None
+    # NOTE: In slim mode, we only print the section if there are differences.
+    if not slim or not comp.schemas.equal():
+        in_common = sorted(comp.schemas.in_common().items())
+        mismatching = sorted(comp.schemas.in_common().mismatching_dtypes().items())
+        schemas = SummaryDataSchemas(
+            left_only_names=sorted(comp.schemas.left_only().column_names()),
+            in_common=[
+                (name, str(left_dtype), str(right_dtype))
+                for name, (left_dtype, right_dtype) in in_common
+            ],
+            right_only_names=sorted(comp.schemas.right_only().column_names()),
+            _equal=comp.schemas.equal(),
+            _mismatching_dtypes=[
+                (name, str(left_dtype), str(right_dtype))
+                for name, (left_dtype, right_dtype) in mismatching
+            ],
+        )
+
+    # --- Rows ---
+    rows: SummaryDataRows | None = None
+    if comp.primary_key is not None:
+        rows_equal = comp._equal_rows()
+    else:
+        rows_equal = comp.equal_num_rows()
+    # NOTE: In slim mode, we only print the section if there are differences.
+    if not slim or not rows_equal:
+        if comp.primary_key is not None:
+            rows = SummaryDataRows(
+                n_left=comp.num_rows_left(),
+                n_right=comp.num_rows_right(),
+                n_left_only=comp.num_rows_left_only(),
+                n_joined_equal=comp.num_rows_joined_equal(),
+                n_joined_unequal=comp.num_rows_joined_unequal(),
+                n_right_only=comp.num_rows_right_only(),
+                _equal_rows=comp._equal_rows(),
+                _equal_num_rows=comp.equal_num_rows(),
+                # NOTE: In slim mode, we omit the row counts section and only show the
+                # row matches section.
+                _show_row_counts=not (comp.equal_num_rows() and slim),
+            )
+        else:
+            rows = SummaryDataRows(
+                n_left=comp.num_rows_left(),
+                n_right=comp.num_rows_right(),
+                n_left_only=None,
+                n_joined_equal=None,
+                n_joined_unequal=None,
+                n_right_only=None,
+                _equal_rows=False,
+                _equal_num_rows=comp.equal_num_rows(),
+                _show_row_counts=True,
+            )
+
+    # --- Columns ---
+    columns: list[SummaryDataColumn] | None = None
+    # NOTE: We can only compute column matches if there are primary key columns and at
+    # least one joined row.
+    match_rates_can_be_computed = (
+        comp.primary_key is not None and comp.num_rows_joined() > 0
+    )
+    if match_rates_can_be_computed:
+        match_rates = comp.fraction_same()
+        # NOTE: In slim mode, we only print the columns section if there are
+        # non-primary key columns and at least one column has a match rate < 1.
+        if not slim or (comp._other_common_columns and min(match_rates.values()) < 1):
+            columns = []
+            for col_name in sorted(match_rates):
+                rate = match_rates[col_name]
+                if not show_perfect_column_matches and rate >= 1:
+                    continue
+                top_k = top_k_changes_by_column[col_name]
+                changes: list[SummaryDataColumnChange] | None = None
+                n_total_changes = 0
+                if top_k > 0 and rate < 1:
+                    all_change_counts = comp.change_counts(
+                        col_name,
+                        include_sample_primary_key=show_sample_primary_key_per_change,
+                    )
+                    n_total_changes = len(all_change_counts)
+                    top_change_counts = all_change_counts.head(top_k)
+                    changes = []
+                    for row in top_change_counts.iter_rows(named=True):
+                        sample_pk: tuple[Any, ...] | None = None
+                        if show_sample_primary_key_per_change:
+                            pk_cols = comp.primary_key
+                            assert isinstance(pk_cols, list)
+                            sample_pk = tuple(row[f"sample_{c}"] for c in pk_cols)
+                        changes.append(
+                            SummaryDataColumnChange(
+                                old=row[Side.LEFT],
+                                new=row[Side.RIGHT],
+                                count=row["count"],
+                                sample_pk=sample_pk,
+                            )
+                        )
+                columns.append(
+                    SummaryDataColumn(
+                        name=col_name,
+                        match_rate=rate,
+                        n_total_changes=n_total_changes,
+                        changes=changes,
+                    )
+                )
+
+    # --- Sample rows left/right only ---
+    sample_rows_left_only: list[tuple[Any, ...]] | None = None
+    sample_rows_right_only: list[tuple[Any, ...]] | None = None
+    if comp.primary_key is not None and sample_k_rows_only > 0:
+        pk = comp.primary_key
+        assert isinstance(pk, list)
+
+        if comp.num_rows_left_only() > 0:
+            df = comp.left_only(lazy=True).select(pk).head(sample_k_rows_only).collect()
+            sample_rows_left_only = [tuple(row) for row in df.iter_rows()]
+        else:
+            sample_rows_left_only = []
+
+        if comp.num_rows_right_only() > 0:
+            df = (
+                comp.right_only(lazy=True).select(pk).head(sample_k_rows_only).collect()
+            )
+            sample_rows_right_only = [tuple(row) for row in df.iter_rows()]
+        else:
+            sample_rows_right_only = []
+
+    return SummaryData(
+        equal=False,
+        left_name=left_name,
+        right_name=right_name,
+        primary_key=comp.primary_key,
+        schemas=schemas,
+        rows=rows,
+        columns=columns,
+        sample_rows_left_only=sample_rows_left_only,
+        sample_rows_right_only=sample_rows_right_only,
+        _is_empty=is_empty,
+        _other_common_columns=comp._other_common_columns,
+        _truncated_left_name=truncated_left,
+        _truncated_right_name=truncated_right,
+    )
 
 
 # ------------------------------------------------------------------------------------ #

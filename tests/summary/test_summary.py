@@ -13,7 +13,7 @@ import pytest
 
 from diffly import compare_frames
 from diffly.comparison import DataFrameComparison
-from diffly.summary import _format_fraction_as_percentage, _to_python
+from diffly.summary import _format_fraction_as_percentage, to_json_safe
 
 
 @pytest.mark.parametrize("show_perfect_column_matches", [True, False])
@@ -263,4 +263,4 @@ def test_summary_data_parametrized(
     ],
 )
 def test__to_python(input: Any, expected: Any) -> None:
-    assert _to_python(input) == expected
+    assert to_json_safe(input) == expected
