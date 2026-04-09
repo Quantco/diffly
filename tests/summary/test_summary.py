@@ -262,5 +262,5 @@ def test_summary_data_parametrized(
         (timedelta(hours=1, minutes=30), 5400),
     ],
 )
-def test__to_python(input: Any, expected: Any) -> None:
+def test__to_json_safe(input: Any, expected: Any) -> None:
     assert to_json_safe(input) == expected
