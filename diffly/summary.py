@@ -95,8 +95,42 @@ class Summary:
     def to_json(self, **kwargs: Any) -> str:
         """Serialize this summary as a JSON string.
 
-        Returns:
-            A JSON string representation of the summary data.
+        Args:
+            **kwargs: Additional keyword arguments passed to :func:`json.dumps`
+                (e.g. ``indent=2`` for pretty-printing).
+
+        Example:
+            .. code-block:: json
+
+                {
+                  "equal": false,
+                  "left_name": "left",
+                  "right_name": "right",
+                  "primary_key": ["id"],
+                  "schemas": {
+                    "left_only_names": [],
+                    "in_common": [["id", "Int64", "Int64"], ["value", "Float64", "Float64"]],
+                    "right_only_names": []
+                  },
+                  "rows": {
+                    "n_left": 3,
+                    "n_right": 3,
+                    "n_left_only": 0,
+                    "n_joined_equal": 2,
+                    "n_joined_unequal": 1,
+                    "n_right_only": 0
+                  },
+                  "columns": [
+                    {
+                      "name": "value",
+                      "match_rate": 0.667,
+                      "n_total_changes": 1,
+                      "changes": [{"old": 1.0, "new": 2.0, "count": 1, "sample_pk": [1]}]
+                    }
+                  ],
+                  "sample_rows_left_only": [],
+                  "sample_rows_right_only": []
+                }
         """
         return self._data.to_json(**kwargs)
 
