@@ -18,3 +18,4 @@ Summary
    :toctree: _gen/
 
    Summary.format
+   Summary.to_json
