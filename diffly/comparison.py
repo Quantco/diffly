@@ -956,7 +956,8 @@ class DataFrameComparison:
                 numerical column across all joined rows, and must return a scalar
                 aggregation expression. See :mod:`diffly.metrics` for presets
                 (``mean``, ``median``, ``mean_absolute_deviation`` etc.). Metrics are
-                only computed for numerical columns.
+                only computed for numerical columns. Prefer short labels — the
+                summary has a fixed width and many or long labels degrade rendering.
 
         Returns:
             A summary which can be printed or written to a file.

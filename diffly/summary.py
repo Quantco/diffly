@@ -13,6 +13,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import polars as pl
+import polars.selectors as cs
 from rich import box
 from rich.columns import Columns as RichColumns
 from rich.console import Console, Group, RenderableType
@@ -22,7 +23,7 @@ from rich.table import Table
 from rich.text import Text
 
 from ._utils import Side, capitalize_first
-from .metrics import Metric
+from .metrics import Metric, _make_numeric_metric
 
 if TYPE_CHECKING:  # pragma: no cover
     from .comparison import DataFrameComparison
@@ -940,28 +941,35 @@ def _compute_column_metrics(
     if comp.primary_key is None or comp.num_rows_joined() == 0:
         return {}
 
-    numeric_cols = [
-        c
-        for c in comp._other_common_columns
-        if comp.left_schema[c].is_numeric() and comp.right_schema[c].is_numeric()
-    ]
-    out: dict[str, dict[str, Any]] = {c: {} for c in numeric_cols}
-    if not numeric_cols:
+    _metrics = {label: _make_numeric_metric(m) for label, m in metrics.items()}
+
+    def select_columns(selector: pl.Expr) -> set[str]:
+        left = set(cs.expand_selector(comp.left_schema, selector))
+        right = set(cs.expand_selector(comp.right_schema, selector))
+        return (left & right) & set(comp._other_common_columns)
+
+    metric_to_columns = {
+        label: select_columns(m.selector) for label, m in _metrics.items()
+    }
+
+    all_columns = sorted(set().union(*metric_to_columns.values()))
+    out: dict[str, dict[str, Any]] = {c: {} for c in all_columns}
+    if not all_columns:
         return out
 
     joined = comp.joined(lazy=True)
     agg_exprs = [
-        metric(
-            pl.col(f"{c}_{Side.LEFT}"),
-            pl.col(f"{c}_{Side.RIGHT}"),
-        ).alias(f"{label}__{c}")
-        for label, metric in metrics.items()
-        for c in numeric_cols
+        metric.fn(
+            pl.col(f"{column}_{Side.LEFT}"),
+            pl.col(f"{column}_{Side.RIGHT}"),
+        ).alias(f"{label}__{column}")
+        for label, metric in _metrics.items()
+        for column in sorted(metric_to_columns[label])
     ]
     row = joined.select(agg_exprs).collect().row(0, named=True)
-    for c in numeric_cols:
-        for label in metrics:
-            out[c][label] = row[f"{label}__{c}"]
+    for label, columns in metric_to_columns.items():
+        for column in columns:
+            out[column][label] = row[f"{label}__{column}"]
     return out
 
 

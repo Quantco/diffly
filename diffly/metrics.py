@@ -4,8 +4,10 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 
 import polars as pl
+import polars.selectors as cs
 
 Metric = Callable[[pl.Expr, pl.Expr], pl.Expr]
 """A metric is a callable mapping ``(left_expr, right_expr)`` to a scalar aggregation
@@ -14,6 +16,24 @@ expression.
 The expressions refer to the left-side and right-side values of a single column across
 all joined rows.
 """
+
+
+@dataclass(frozen=True)
+class _Metric:
+    """A metric paired with a column-applicability selector.
+
+    Internal only.
+    """
+
+    fn: Metric
+    selector: pl.Expr
+
+    def __call__(self, left: pl.Expr, right: pl.Expr) -> pl.Expr:
+        return self.fn(left, right)
+
+
+def _make_numeric_metric(metric: Metric) -> _Metric:
+    return _Metric(fn=metric, selector=cs.numeric())
 
 
 def mean(left: pl.Expr, right: pl.Expr) -> pl.Expr:

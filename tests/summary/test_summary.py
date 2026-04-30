@@ -11,7 +11,7 @@ from typing import Any
 import polars as pl
 import pytest
 
-from diffly import compare_frames
+from diffly import compare_frames, metrics
 from diffly.comparison import DataFrameComparison
 from diffly.summary import _format_fraction_as_percentage, to_json_safe
 
@@ -251,6 +251,43 @@ def test_summary_data_parametrized(
     }
 
     assert result == expected
+
+
+@pytest.mark.parametrize("show_perfect_column_matches", [True, False])
+def test_summary_data_metrics(show_perfect_column_matches: bool) -> None:
+    comp = _make_comparison()
+    summary = comp.summary(
+        show_perfect_column_matches=show_perfect_column_matches,
+        metrics={"mean": metrics.mean, "max": metrics.max},
+    )
+    result = json.loads(summary.to_json())
+
+    # Joined rows (id=1,2,3): value deltas = [0, 5, 0].
+    value_metrics = {"mean": pytest.approx(5 / 3), "max": 5.0}
+
+    expected_columns = []
+    if show_perfect_column_matches:
+        # status is non-numeric → metrics stays None.
+        expected_columns.append(
+            {
+                "name": "status",
+                "match_rate": 1.0,
+                "n_total_changes": 0,
+                "changes": None,
+                "metrics": None,
+            }
+        )
+    expected_columns.append(
+        {
+            "name": "value",
+            "match_rate": pytest.approx(2 / 3),
+            "n_total_changes": 0,
+            "changes": None,
+            "metrics": value_metrics,
+        }
+    )
+
+    assert result["columns"] == expected_columns
 
 
 @pytest.mark.parametrize(
