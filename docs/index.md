@@ -27,6 +27,7 @@ Diffly is a utility package for comparing `polars` data frames and lazy frames w
 - **Lazy evaluation**: Uses `polars` lazy frames internally for efficient computation
 - **Temporal tolerance**: Support for comparing temporal types (dates, datetimes) with configurable tolerances
 - **Per-column tolerances**: Fine-grained control over comparison tolerances for each column
+- **Per-column metrics**: Compute `mean`, `quantile`, `mean_relative_deviation`, and custom aggregations over `right - left` for numerical columns
 - **Method caching**: Automatically caches comparison results to avoid recomputation
 - **Testing utilities**: Built-in assertion functions for data frame and collection equality in tests
 
