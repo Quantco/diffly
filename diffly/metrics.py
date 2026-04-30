@@ -8,9 +8,12 @@ from collections.abc import Callable
 import polars as pl
 
 Metric = Callable[[pl.Expr, pl.Expr], pl.Expr]
-"""A metric is a callable mapping ``(left_expr, right_expr)`` to a scalar
-aggregation expression. The expressions refer to the left-side and right-side
-values of a single column across all joined rows."""
+"""A metric is a callable mapping ``(left_expr, right_expr)`` to a scalar aggregation
+expression.
+
+The expressions refer to the left-side and right-side values of a single column across
+all joined rows.
+"""
 
 
 def mean(left: pl.Expr, right: pl.Expr) -> pl.Expr:

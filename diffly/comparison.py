@@ -15,7 +15,6 @@ from polars.schema import Schema as PolarsSchema
 from ._cache import cached_method
 from ._conditions import condition_equal_columns, condition_equal_rows
 from ._exceptions import PrimaryKeyError
-from .metrics import Metric
 from ._utils import (
     ABS_TOL_DEFAULT,
     ABS_TOL_TEMPORAL_DEFAULT,
@@ -26,6 +25,7 @@ from ._utils import (
     lazy_len,
     make_and_validate_mapping,
 )
+from .metrics import Metric
 
 if TYPE_CHECKING:  # pragma: no cover
     # NOTE: We cannot import at runtime as we're otherwise running into circular
