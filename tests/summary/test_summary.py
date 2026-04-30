@@ -216,11 +216,18 @@ def test_summary_data_parametrized(
             if show_value_changes
             else None
         ),
+        "metrics": None,
     }
     expected_columns = []
     if show_perfect_column_matches:
         expected_columns.append(
-            {"name": "status", "match_rate": 1.0, "n_total_changes": 0, "changes": None}
+            {
+                "name": "status",
+                "match_rate": 1.0,
+                "n_total_changes": 0,
+                "changes": None,
+                "metrics": None,
+            }
         )
     expected_columns.append(value_col)
 

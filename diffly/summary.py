@@ -570,13 +570,16 @@ class Summary:
         elif not columns:
             display_items.append(Text("All columns match perfectly.", style="italic"))
         else:
-            matches = Table(show_header=False)
+            metric_labels = self._data._metric_labels
+            matches = Table(show_header=bool(metric_labels))
             matches.add_column(
                 "Column",
                 max_width=COLUMN_SECTION_COLUMN_WIDTH,
                 overflow=OVERFLOW,
             )
             matches.add_column("Match Rate", justify="right")
+            for label in metric_labels:
+                matches.add_column(label, justify="right")
             has_top_changes_column = any(
                 c.changes is not None for c in columns if c.match_rate < 1
             )
@@ -588,6 +591,9 @@ class Summary:
                     Text(col.name, style="cyan"),
                     f"{_format_fraction_as_percentage(col.match_rate)}",
                 ]
+                for label in metric_labels:
+                    value = col.metrics.get(label) if col.metrics else None
+                    row_items.append(_format_metric_value(value))
                 if col.changes is not None:
                     change_lines = []
                     for change in col.changes:
@@ -1088,6 +1094,10 @@ def _format_fraction_as_percentage(fraction: float) -> str:
     return f"{percentage:.2f}%"
 
 
+def _yellow(raw: Any) -> str:
+    return f"[yellow]{raw}[/yellow]"
+
+
 def _format_value(value: Any) -> str:
     if isinstance(value, list):
         formatted = [_format_value(x) for x in value]
@@ -1104,7 +1114,15 @@ def _format_value(value: Any) -> str:
         raw = str(value)
     else:
         raw = value
-    return f"[yellow]{raw}[/yellow]"
+    return _yellow(raw)
+
+
+def _format_metric_value(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, float):
+        return _yellow(f"{value:.4g}")
+    return _format_value(value)
 
 
 def _trim_whitespaces(s: str) -> str:

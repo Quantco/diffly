@@ -15,6 +15,7 @@ from polars.schema import Schema as PolarsSchema
 from ._cache import cached_method
 from ._conditions import condition_equal_columns, condition_equal_rows
 from ._exceptions import PrimaryKeyError
+from .metrics import Metric
 from ._utils import (
     ABS_TOL_DEFAULT,
     ABS_TOL_TEMPORAL_DEFAULT,
@@ -919,6 +920,7 @@ class DataFrameComparison:
         right_name: str = Side.RIGHT,
         slim: bool = False,
         hidden_columns: list[str] | None = None,
+        metrics: Mapping[str, Metric] | None = None,
     ) -> Summary:
         """Generate a summary of all aspects of the comparison.
 
@@ -948,6 +950,13 @@ class DataFrameComparison:
                 advanced users who are familiar with the summary format.
             hidden_columns: Columns for which no values are printed, e.g. because they
                 contain sensitive information.
+            metrics: Optional mapping from display label to a metric callable
+                ``(left_expr, right_expr) -> pl.Expr``. Each callable receives two
+                :class:`polars.Expr` referring to the left and right values of a single
+                numerical column across all joined rows, and must return a scalar
+                aggregation expression. See :mod:`diffly.metrics` for presets
+                (``mean``, ``median``, ``mean_absolute_deviation`` etc.). Metrics are
+                only computed for numerical columns.
 
         Returns:
             A summary which can be printed or written to a file.
@@ -973,6 +982,7 @@ class DataFrameComparison:
             right_name=right_name,
             slim=slim,
             hidden_columns=hidden_columns,
+            metrics=metrics,
         )
 
     # ----------------------------------- UTILITIES ----------------------------------- #

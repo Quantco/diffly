@@ -19,6 +19,7 @@ from diffly.summary import WIDTH
 
 from ._compat import dy
 from .comparison import DataFrameComparison, compare_frames
+from .metrics import Metric
 
 
 def assert_collection_equal(
@@ -39,6 +40,7 @@ def assert_collection_equal(
     right_name: str = Side.RIGHT,
     slim: bool = False,
     hidden_columns: list[str] | None = None,
+    metrics: Mapping[str, Metric] | None = None,
 ) -> None:
     """Assert that two :mod:`dataframely` collections are equal.
 
@@ -82,6 +84,9 @@ def assert_collection_equal(
             advanced users who are familiar with the summary format.
         hidden_columns: Columns for which no values are printed, e.g. because they
             contain sensitive information.
+        metrics: Optional mapping from display label to a metric callable
+            ``(left_expr, right_expr) -> pl.Expr``. See :mod:`diffly.metrics` for
+            presets.
 
     Raises:
         AssertionError: If the collections are not equal.
@@ -138,6 +143,7 @@ def assert_collection_equal(
                             right_name=right_name,
                             slim=slim,
                             hidden_columns=hidden_columns,
+                            metrics=metrics,
                         )
                     )
                 }"""
@@ -167,6 +173,7 @@ def assert_frame_equal(
     right_name: str = Side.RIGHT,
     slim: bool = False,
     hidden_columns: list[str] | None = None,
+    metrics: Mapping[str, Metric] | None = None,
 ) -> None:
     """Assert that two :mod:`polars` data frames are equal.
 
@@ -217,6 +224,9 @@ def assert_frame_equal(
             advanced users who are familiar with the summary format.
         hidden_columns: Columns for which no values are printed, e.g. because they
             contain sensitive information.
+        metrics: Optional mapping from display label to a metric callable
+            ``(left_expr, right_expr) -> pl.Expr``. See :mod:`diffly.metrics` for
+            presets.
 
     Raises:
         AssertionError: If the data frames are not equal.
@@ -262,6 +272,7 @@ def assert_frame_equal(
             right_name=right_name,
             slim=slim,
             hidden_columns=hidden_columns,
+            metrics=metrics,
         )
         text = textwrap.indent(str(summary), " " * 2)
         raise AssertionError(f"Data frames are not equal:\n\n{text}")
