@@ -6,11 +6,13 @@ from __future__ import annotations
 import dataclasses
 import io
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Literal, cast
 
+import polars as pl
 from rich import box
 from rich.columns import Columns as RichColumns
 from rich.console import Console, Group, RenderableType
@@ -20,6 +22,7 @@ from rich.table import Table
 from rich.text import Text
 
 from ._utils import Side, capitalize_first
+from .metrics import Metric
 
 if TYPE_CHECKING:  # pragma: no cover
     from .comparison import DataFrameComparison
@@ -57,6 +60,7 @@ class Summary:
         right_name: str,
         slim: bool,
         hidden_columns: list[str] | None,
+        metrics: Mapping[str, Metric] | None,
     ):
         self.slim = slim
         self._data = _compute_summary_data(
@@ -69,6 +73,7 @@ class Summary:
             right_name=right_name,
             slim=slim,
             hidden_columns=hidden_columns,
+            metrics=metrics,
         )
 
     def format(self, pretty: bool | None = None) -> str:
@@ -703,6 +708,7 @@ class SummaryDataColumn:
     match_rate: float
     n_total_changes: int
     changes: list[SummaryDataColumnChange] | None
+    metrics: dict[str, Any] | None = None
 
 
 @dataclass
@@ -720,6 +726,7 @@ class SummaryData:
     _other_common_columns: list[str]
     _truncated_left_name: str
     _truncated_right_name: str
+    _metric_labels: list[str] = dataclasses.field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         def _convert(obj: Any) -> Any:
@@ -758,6 +765,7 @@ def _compute_summary_data(
     right_name: str,
     slim: bool,
     hidden_columns: list[str] | None,
+    metrics: Mapping[str, Metric] | None,
 ) -> SummaryData:
     from .comparison import DataFrameComparison
 
@@ -823,6 +831,10 @@ def _compute_summary_data(
             _truncated_right_name=truncated_right,
         )
 
+    metrics_resolved: dict[str, Metric] = dict(metrics or {})
+    metrics_by_column = _compute_column_metrics(comp, metrics_resolved)
+    metric_labels = list(metrics_resolved.keys())
+
     schemas = _compute_schemas(comp, slim)
     rows = _compute_rows(comp, slim)
     columns = _compute_columns(
@@ -831,6 +843,7 @@ def _compute_summary_data(
         show_perfect_column_matches,
         top_k_changes_by_column,
         show_sample_primary_key_per_change,
+        metrics_by_column,
     )
     sample_rows_left_only, sample_rows_right_only = _compute_sample_rows(
         comp, sample_k_rows_only
@@ -850,6 +863,7 @@ def _compute_summary_data(
         _other_common_columns=comp._other_common_columns,
         _truncated_left_name=truncated_left,
         _truncated_right_name=truncated_right,
+        _metric_labels=metric_labels,
     )
 
 
@@ -911,12 +925,47 @@ def _compute_rows(comp: DataFrameComparison, slim: bool) -> SummaryDataRows | No
     )
 
 
+def _compute_column_metrics(
+    comp: DataFrameComparison,
+    metrics: Mapping[str, Metric],
+) -> dict[str, dict[str, Any]]:
+    if not metrics:
+        return {}
+    if comp.primary_key is None or comp.num_rows_joined() == 0:
+        return {}
+
+    numeric_cols = [
+        c
+        for c in comp._other_common_columns
+        if comp.left_schema[c].is_numeric() and comp.right_schema[c].is_numeric()
+    ]
+    out: dict[str, dict[str, Any]] = {c: {} for c in numeric_cols}
+    if not numeric_cols:
+        return out
+
+    joined = comp.joined(lazy=True)
+    agg_exprs = [
+        metric(
+            pl.col(f"{c}_{Side.LEFT}"),
+            pl.col(f"{c}_{Side.RIGHT}"),
+        ).alias(f"{label}__{c}")
+        for label, metric in metrics.items()
+        for c in numeric_cols
+    ]
+    row = joined.select(agg_exprs).collect().row(0, named=True)
+    for c in numeric_cols:
+        for label in metrics:
+            out[c][label] = row[f"{label}__{c}"]
+    return out
+
+
 def _compute_columns(
     comp: DataFrameComparison,
     slim: bool,
     show_perfect_column_matches: bool,
     top_k_changes_by_column: dict[str, int],
     show_sample_primary_key_per_change: bool,
+    metrics_by_column: dict[str, dict[str, Any]],
 ) -> list[SummaryDataColumn] | None:
     # NOTE: We can only compute column matches if there are primary key columns and at
     # least one joined row.
@@ -963,6 +1012,7 @@ def _compute_columns(
                 match_rate=rate,
                 n_total_changes=n_total_changes,
                 changes=changes,
+                metrics=metrics_by_column.get(col_name),
             )
         )
     return columns
