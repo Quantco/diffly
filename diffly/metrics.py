@@ -28,9 +28,6 @@ class _Metric:
     fn: Metric
     selector: pl.Expr
 
-    def __call__(self, left: pl.Expr, right: pl.Expr) -> pl.Expr:
-        return self.fn(left, right)
-
 
 def _make_numeric_metric(metric: Metric) -> _Metric:
     return _Metric(fn=metric, selector=cs.numeric())

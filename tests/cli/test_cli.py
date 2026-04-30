@@ -56,3 +56,24 @@ def test_cli_smoke(tmp_path: Path, output_json: bool) -> None:
         assert result.output == comparison.summary().to_json() + "\n"
     else:
         assert result.output == comparison.summary().format(pretty=True) + "\n"
+
+
+def test_cli_unknown_metric(tmp_path: Path) -> None:
+    left = pl.DataFrame({"id": [1, 2], "x": [1.0, 2.0]})
+    right = pl.DataFrame({"id": [1, 2], "x": [1.0, 3.0]})
+    left.write_parquet(tmp_path / "left.parquet")
+    right.write_parquet(tmp_path / "right.parquet")
+
+    result = runner.invoke(
+        app,
+        [
+            str(tmp_path / "left.parquet"),
+            str(tmp_path / "right.parquet"),
+            "--primary-key",
+            "id",
+            "--metric",
+            "bogus",
+        ],
+    )
+    assert result.exit_code != 0
+    assert "Unknown metric" in result.output
