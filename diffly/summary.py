@@ -733,7 +733,7 @@ class SummaryData:
     _other_common_columns: list[str]
     _truncated_left_name: str
     _truncated_right_name: str
-    _metric_labels: list[str] = dataclasses.field(default_factory=list)
+    _metric_labels: list[str]
 
     def to_dict(self) -> dict[str, Any]:
         def _convert(obj: Any) -> Any:
@@ -836,6 +836,7 @@ def _compute_summary_data(
             _other_common_columns=comp._other_common_columns,
             _truncated_left_name=truncated_left,
             _truncated_right_name=truncated_right,
+            _metric_labels=[],
         )
 
     metrics_resolved: dict[str, Metric] = dict(metrics or {})
