@@ -1107,9 +1107,13 @@ def _yellow(raw: Any) -> str:
     return f"[yellow]{raw}[/yellow]"
 
 
-def _format_value(value: Any) -> str:
+def _format_value(value: Any, *, float_format: str | None = None) -> str:
+    """Format a raw cell value for display, wrapped in the yellow highlight style.
+
+    Floats are shown with their default repr unless ``float_format`` is set.
+    """
     if isinstance(value, list):
-        formatted = [_format_value(x) for x in value]
+        formatted = [_format_value(x, float_format=float_format) for x in value]
         if len(formatted) > 5:
             return f"[{', '.join(formatted[:2])}, ..., {', '.join(formatted[-2:])}]"
         return f"[{', '.join(formatted)}]"
@@ -1121,17 +1125,21 @@ def _format_value(value: Any) -> str:
             raw = f'"{value}"'
     elif isinstance(value, date | datetime):
         raw = str(value)
+    elif isinstance(value, float) and float_format is not None:
+        raw = format(value, float_format)
     else:
         raw = value
     return _yellow(raw)
 
 
 def _format_metric_value(value: Any) -> str:
+    """Format a metric value for the column summary.
+
+    Blanks out ``None`` and renders floats with ``.4g`` precision.
+    """
     if value is None:
         return ""
-    if isinstance(value, float):
-        return _yellow(f"{value:.4g}")
-    return _format_value(value)
+    return _format_value(value, float_format=".4g")
 
 
 def _trim_whitespaces(s: str) -> str:
