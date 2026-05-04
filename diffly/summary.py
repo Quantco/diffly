@@ -715,7 +715,7 @@ class SummaryDataColumn:
     match_rate: float
     n_total_changes: int
     changes: list[SummaryDataColumnChange] | None
-    metrics: dict[str, Any] | None = None
+    metrics: dict[str, Any] | None
 
 
 @dataclass
