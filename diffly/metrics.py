@@ -72,6 +72,8 @@ def mean_relative_deviation(left: pl.Expr, right: pl.Expr) -> pl.Expr:
 def quantile(q: float) -> Metric:
     """Factory returning a metric that computes the ``q``-quantile of
     ``right - left``."""
+    if not 0 <= q <= 1:
+        raise ValueError(f"q must be in [0, 1], got {q}")
 
     def _quantile(left: pl.Expr, right: pl.Expr) -> pl.Expr:
         return (right - left).quantile(q)
