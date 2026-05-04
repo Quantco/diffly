@@ -937,8 +937,6 @@ def _compute_column_metrics(
     comp: DataFrameComparison,
     metrics: Mapping[str, Metric],
 ) -> dict[str, dict[str, Any]]:
-    if not metrics:
-        return {}
     if comp.primary_key is None or comp.num_rows_joined() == 0:
         return {}
 
