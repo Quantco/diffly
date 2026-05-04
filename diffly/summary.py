@@ -952,9 +952,9 @@ def _compute_column_metrics(
     }
 
     all_columns = sorted(set().union(*metric_to_columns.values()))
-    out: dict[str, dict[str, Any]] = {c: {} for c in all_columns}
     if not all_columns:
-        return out
+        return {}
+    out: dict[str, dict[str, Any]] = {c: {} for c in all_columns}
 
     joined = comp.joined(lazy=True)
     agg_exprs = [
