@@ -131,7 +131,6 @@ def main(
     ] = [],
 ) -> None:
     """Compare two `parquet` files and print the comparison result."""
-
     comparison = compare_frames(
         pl.scan_parquet(left),
         pl.scan_parquet(right),
