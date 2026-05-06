@@ -82,11 +82,11 @@ def quantile(q: float) -> Metric:
 
 
 _PRESETS: dict[str, Metric] = {
-    "mean": mean,
-    "median": median,
-    "min": min,
-    "max": max,
-    "std": std,
-    "mean_absolute_deviation": mean_absolute_deviation,
-    "mean_relative_deviation": mean_relative_deviation,
+    "Mean": mean,
+    "Median": median,
+    "Min": min,
+    "Max": max,
+    "Std": std,
+    "Mean absolute deviation": mean_absolute_deviation,
+    "Mean relative deviation": mean_relative_deviation,
 }

@@ -30,12 +30,12 @@ def test_generate() -> None:
     generate_summaries(
         comp,
         metrics={
-            "mean": metrics.mean,
-            "median": metrics.median,
-            "min": metrics.min,
-            "max": metrics.max,
-            "std": metrics.std,
-            "mad": metrics.mean_absolute_deviation,
-            "mrd": metrics.mean_relative_deviation,
+            "Mean": metrics.mean,
+            "Median": metrics.median,
+            "Min": metrics.min,
+            "Max": metrics.max,
+            "Std": metrics.std,
+            "Mean absolute deviation": metrics.mean_absolute_deviation,
+            "Mean relative deviation": metrics.mean_relative_deviation,
         },
     )
