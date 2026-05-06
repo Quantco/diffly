@@ -9,14 +9,6 @@ from dataclasses import dataclass
 import polars as pl
 import polars.selectors as cs
 
-Metric = Callable[[pl.Expr, pl.Expr], pl.Expr]
-"""A metric is a callable mapping ``(left_expr, right_expr)`` to a scalar aggregation
-expression.
-
-The expressions refer to the left-side and right-side values of a single column across
-all joined rows.
-"""
-
 
 @dataclass(frozen=True)
 class _Metric:
@@ -27,6 +19,15 @@ class _Metric:
 
     fn: Metric
     selector: pl.Expr
+
+
+Metric = Callable[[pl.Expr, pl.Expr], pl.Expr]
+"""A metric is a callable mapping ``(left_expr, right_expr)`` to a scalar aggregation
+expression.
+
+The expressions refer to the left-side and right-side values of a single column across
+all joined rows.
+"""
 
 
 def _make_numeric_metric(metric: Metric) -> _Metric:
