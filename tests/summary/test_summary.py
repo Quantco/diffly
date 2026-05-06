@@ -258,12 +258,12 @@ def test_summary_data_metrics(show_perfect_column_matches: bool) -> None:
     comp = _make_comparison()
     summary = comp.summary(
         show_perfect_column_matches=show_perfect_column_matches,
-        metrics={"mean": metrics.mean, "max": metrics.max},
+        metrics={"Mean": metrics.mean, "Max": metrics.max},
     )
     result = json.loads(summary.to_json())
 
     # Joined rows (id=1,2,3): value deltas = [0, 5, 0].
-    value_metrics = {"mean": pytest.approx(5 / 3), "max": 5.0}
+    value_metrics = {"Mean": pytest.approx(5 / 3), "Max": 5.0}
 
     expected_columns = []
     if show_perfect_column_matches:
@@ -293,10 +293,10 @@ def test_summary_data_metrics(show_perfect_column_matches: bool) -> None:
 def test_summary_format_with_metrics() -> None:
     comp = _make_comparison()
     rendered = comp.summary(
-        metrics={"mean": metrics.mean},
+        metrics={"Mean": metrics.mean},
     ).format(pretty=False)
-    # Header is shown when metrics are present; "mean" appears as a column header.
-    assert "mean" in rendered
+    # Header is shown when metrics are present; "Mean" appears as a column header.
+    assert "Mean" in rendered
     # Numeric column gets a rendered metric value; expected mean delta is 5/3.
     assert "1.667" in rendered
 
@@ -306,7 +306,7 @@ def test_summary_metrics_no_joined_rows() -> None:
     left = pl.DataFrame({"id": [1, 2], "value": [1.0, 2.0]})
     right = pl.DataFrame({"id": [10, 20], "value": [5.0, 6.0]})
     comp = compare_frames(left, right, primary_key="id")
-    summary = comp.summary(metrics={"mean": metrics.mean})
+    summary = comp.summary(metrics={"Mean": metrics.mean})
     result = json.loads(summary.to_json())
     # With no joined rows, the columns section is skipped entirely.
     assert result["columns"] is None
@@ -319,7 +319,7 @@ def test_summary_metrics_no_numeric_columns() -> None:
     comp = compare_frames(left, right, primary_key="id")
     summary = comp.summary(
         show_perfect_column_matches=True,
-        metrics={"mean": metrics.mean},
+        metrics={"Mean": metrics.mean},
     )
     result = json.loads(summary.to_json())
     # status appears but has no metric values (non-numeric column).
