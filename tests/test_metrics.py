@@ -68,3 +68,8 @@ def test_quantile(frame: pl.DataFrame) -> None:
     # deltas [0, 0, 2]: p50 = 0, p100 = 2
     assert _apply(metrics.quantile(0.5), frame) == 0
     assert _apply(metrics.quantile(1.0), frame) == 2
+
+
+def test_quantile_out_of_range() -> None:
+    with pytest.raises(ValueError, match="q must be in"):
+        metrics.quantile(1.5)

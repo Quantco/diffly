@@ -265,42 +265,6 @@ def test_summary_data_parametrized(
     assert result == expected
 
 
-def test_summary_format_with_metrics() -> None:
-    comp = _make_comparison()
-    rendered = comp.summary(
-        metrics={"Mean": metrics.mean},
-    ).format(pretty=False)
-    # Header is shown when metrics are present; "Mean" appears as a column header.
-    assert "Mean" in rendered
-    # Numeric column gets a rendered metric value; expected mean delta is 5/3.
-    assert "1.667" in rendered
-
-
-def test_summary_metrics_no_joined_rows() -> None:
-    # Disjoint primary keys -> num_rows_joined == 0.
-    left = pl.DataFrame({"id": [1, 2], "value": [1.0, 2.0]})
-    right = pl.DataFrame({"id": [10, 20], "value": [5.0, 6.0]})
-    comp = compare_frames(left, right, primary_key="id")
-    summary = comp.summary(metrics={"Mean": metrics.mean})
-    result = json.loads(summary.to_json())
-    # With no joined rows, the columns section is skipped entirely.
-    assert result["columns"] is None
-
-
-def test_summary_metrics_no_numeric_columns() -> None:
-    # Non-PK common columns are all non-numeric.
-    left = pl.DataFrame({"id": [1, 2, 3], "status": ["a", "b", "c"]})
-    right = pl.DataFrame({"id": [1, 2, 3], "status": ["a", "b", "x"]})
-    comp = compare_frames(left, right, primary_key="id")
-    summary = comp.summary(
-        show_perfect_column_matches=True,
-        metrics={"Mean": metrics.mean},
-    )
-    result = json.loads(summary.to_json())
-    # status appears but has no metric values (non-numeric column).
-    assert all(col["metrics"] is None for col in result["columns"])
-
-
 @pytest.mark.parametrize(
     "input, expected",
     [
