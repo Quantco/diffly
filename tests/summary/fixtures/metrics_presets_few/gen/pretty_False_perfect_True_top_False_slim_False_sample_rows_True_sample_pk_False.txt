@@ -21,7 +21,7 @@
  Columns
  ▔▔▔▔▔▔▔
    ┏━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━┳━━━━━┓
-   ┃ Column ┃ Match Rate ┃ mean ┃ max ┃
+   ┃ Column ┃ Match Rate ┃ Mean ┃ Max ┃
    ┡━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━╇━━━━━┩
    │ price  │     60.00% │  0.6 │   2 │
    │ qty    │     80.00% │  0.2 │   1 │
