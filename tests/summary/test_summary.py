@@ -155,10 +155,18 @@ def _make_comparison() -> DataFrameComparison:
 
 
 @pytest.mark.parametrize(
-    "show_perfect_column_matches, show_top_column_changes, slim, sample_rows, sample_pk, hide_value",
+    "show_perfect_column_matches, show_top_column_changes, slim, sample_rows, sample_pk, hide_value, with_metrics",
     [
-        (combo[0], combo[1], combo[2], combo[3], combo[3] and combo[1], combo[4])
-        for combo in itertools.product([True, False], repeat=5)
+        (
+            combo[0],
+            combo[1],
+            combo[2],
+            combo[3],
+            combo[3] and combo[1],
+            combo[4],
+            combo[5],
+        )
+        for combo in itertools.product([True, False], repeat=6)
     ],
 )
 def test_summary_data_parametrized(
@@ -168,10 +176,12 @@ def test_summary_data_parametrized(
     sample_rows: bool,
     sample_pk: bool,
     hide_value: bool,
+    with_metrics: bool,
 ) -> None:
     comp = _make_comparison()
     top_k = 3 if show_top_column_changes else 0
     hidden_columns = ["value"] if hide_value else None
+    metrics_arg = {"Mean": metrics.mean, "Max": metrics.max} if with_metrics else None
     summary = comp.summary(
         show_perfect_column_matches=show_perfect_column_matches,
         top_k_column_changes=top_k,
@@ -179,6 +189,7 @@ def test_summary_data_parametrized(
         show_sample_primary_key_per_change=sample_pk,
         slim=slim,
         hidden_columns=hidden_columns,
+        metrics=metrics_arg,
     )
     result = json.loads(summary.to_json())
 
@@ -216,7 +227,8 @@ def test_summary_data_parametrized(
             if show_value_changes
             else None
         ),
-        "metrics": None,
+        # Joined rows (id=1,2,3): value deltas = [0, 5, 0].
+        "metrics": {"Mean": pytest.approx(5 / 3), "Max": 5.0} if with_metrics else None,
     }
     expected_columns = []
     if show_perfect_column_matches:
@@ -251,43 +263,6 @@ def test_summary_data_parametrized(
     }
 
     assert result == expected
-
-
-@pytest.mark.parametrize("show_perfect_column_matches", [True, False])
-def test_summary_data_metrics(show_perfect_column_matches: bool) -> None:
-    comp = _make_comparison()
-    summary = comp.summary(
-        show_perfect_column_matches=show_perfect_column_matches,
-        metrics={"Mean": metrics.mean, "Max": metrics.max},
-    )
-    result = json.loads(summary.to_json())
-
-    # Joined rows (id=1,2,3): value deltas = [0, 5, 0].
-    value_metrics = {"Mean": pytest.approx(5 / 3), "Max": 5.0}
-
-    expected_columns = []
-    if show_perfect_column_matches:
-        # status is non-numeric → metrics stays None.
-        expected_columns.append(
-            {
-                "name": "status",
-                "match_rate": 1.0,
-                "n_total_changes": 0,
-                "changes": None,
-                "metrics": None,
-            }
-        )
-    expected_columns.append(
-        {
-            "name": "value",
-            "match_rate": pytest.approx(2 / 3),
-            "n_total_changes": 0,
-            "changes": None,
-            "metrics": value_metrics,
-        }
-    )
-
-    assert result["columns"] == expected_columns
 
 
 def test_summary_format_with_metrics() -> None:
