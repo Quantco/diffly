@@ -141,7 +141,6 @@ def main(
     ] = [],
 ) -> None:
     """Compare two `parquet` files and print the comparison result."""
-
     for name in metric:
         if name not in _PRESETS:
             raise typer.BadParameter(
