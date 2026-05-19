@@ -18,7 +18,7 @@ class _Metric:
     """
 
     fn: Metric
-    selector: pl.Expr
+    selector: cs.Selector
 
 
 Metric = Callable[[pl.Expr, pl.Expr], pl.Expr]

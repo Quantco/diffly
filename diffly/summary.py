@@ -942,7 +942,7 @@ def _compute_column_metrics(
 
     _metrics = {label: _make_numeric_metric(m) for label, m in metrics.items()}
 
-    def select_columns(selector: pl.Expr) -> set[str]:
+    def select_columns(selector: cs.Selector) -> set[str]:
         left = set(cs.expand_selector(comp.left_schema, selector))
         right = set(cs.expand_selector(comp.right_schema, selector))
         return (left & right) & set(comp._other_common_columns)
