@@ -82,7 +82,7 @@ def quantile(q: float) -> Metric:
     return _quantile
 
 
-_PRESETS: dict[str, Metric] = {
+DEFAULT_METRICS: dict[str, Metric] = {
     "Mean": mean,
     "Median": median,
     "Min": min,
