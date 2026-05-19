@@ -86,7 +86,8 @@ def assert_collection_equal(
             contain sensitive information.
         metrics: Optional mapping from display label to a metric callable
             ``(left_expr, right_expr) -> pl.Expr``. See :mod:`diffly.metrics` for
-            presets.
+            presets. When ``None`` (default), no metrics are computed; presets are
+            not applied automatically.
 
     Raises:
         AssertionError: If the collections are not equal.
@@ -226,7 +227,8 @@ def assert_frame_equal(
             contain sensitive information.
         metrics: Optional mapping from display label to a metric callable
             ``(left_expr, right_expr) -> pl.Expr``. See :mod:`diffly.metrics` for
-            presets.
+            presets. When ``None`` (default), no metrics are computed; presets are
+            not applied automatically.
 
     Raises:
         AssertionError: If the data frames are not equal.

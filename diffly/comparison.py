@@ -955,9 +955,11 @@ class DataFrameComparison:
                 :class:`polars.Expr` referring to the left and right values of a single
                 numerical column across all joined rows, and must return a scalar
                 aggregation expression. See :mod:`diffly.metrics` for presets
-                (``mean``, ``median``, ``mean_absolute_deviation`` etc.). Metrics are
-                only computed for numerical columns. Prefer short labels — the
-                summary has a fixed width and many or long labels degrade rendering.
+                (``mean``, ``median``, ``mean_absolute_deviation`` etc.). When ``None``
+                (default), no metrics are computed; presets are not applied
+                automatically. Metrics are only computed for numerical columns. Prefer
+                short labels — the summary has a fixed width and many or long labels
+                degrade rendering.
 
         Returns:
             A summary which can be printed or written to a file.
