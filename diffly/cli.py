@@ -120,7 +120,7 @@ def main(
             ),
         ),
     ] = False,
-    hidden_columns: Annotated[
+    hidden_column: Annotated[
         list[str],
         typer.Option(
             help=(
@@ -147,7 +147,7 @@ def main(
         left_name=left_name,
         right_name=right_name,
         slim=slim,
-        hidden_columns=hidden_columns,
+        hidden_columns=hidden_column,
     )
     if output_json:
         typer.echo(summary.to_json())
