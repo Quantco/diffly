@@ -954,8 +954,8 @@ class DataFrameComparison:
                 ``(left_expr, right_expr) -> pl.Expr``. Each callable receives two
                 :class:`polars.Expr` referring to the left and right values of a single
                 numerical column across all joined rows, and must return a scalar
-                aggregation expression. See :mod:`diffly.metrics` for presets
-                (``mean``, ``median``, ``mean_absolute_deviation`` etc.). When ``None``
+                aggregation expression. See :doc:`/api/metrics` for the full list of
+                presets and the :data:`~diffly.metrics.Metric` type. When ``None``
                 (default), no metrics are computed; presets are not applied
                 automatically. Metrics are only computed for numerical columns. Prefer
                 short labels — the summary has a fixed width and many or long labels

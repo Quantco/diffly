@@ -23,6 +23,12 @@ API Reference
 
       ``Summary`` class for rich-formatted comparison reports.
 
+   .. grid-item-card:: Metrics
+      :link: metrics
+      :link-type: doc
+
+      Built-in metric presets and the ``Metric`` callable for ``summary(metrics=...)``.
+
    .. grid-item-card:: Testing
       :link: testing
       :link-type: doc
@@ -36,4 +42,5 @@ API Reference
    data_comparison
    schema_comparison
    summary
+   metrics
    testing
