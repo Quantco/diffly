@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import datetime as dt
+import warnings
 from pathlib import Path
 from typing import Annotated
 
@@ -129,8 +130,18 @@ def main(
             )
         ),
     ] = [],
+    hidden_columns: Annotated[
+        list[str],
+        typer.Option(hidden=True),
+    ] = [],
 ) -> None:
     """Compare two `parquet` files and print the comparison result."""
+    if hidden_columns:
+        warnings.warn(
+            "`--hidden-columns` is deprecated, use `--hidden-column` instead.",
+            FutureWarning,
+        )
+        hidden_column = [*hidden_column, *hidden_columns]
     comparison = compare_frames(
         pl.scan_parquet(left),
         pl.scan_parquet(right),
