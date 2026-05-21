@@ -59,10 +59,9 @@ def test_cli_smoke(tmp_path: Path, output_json: bool) -> None:
 
 
 def test_cli_hidden_columns_alias_warns(tmp_path: Path) -> None:
-    left = pl.DataFrame({"id": [1, 2], "secret": ["a", "b"]})
-    right = pl.DataFrame({"id": [1, 2], "secret": ["a", "b"]})
-    left.write_parquet(tmp_path / "left.parquet")
-    right.write_parquet(tmp_path / "right.parquet")
+    df = pl.DataFrame({"id": [1, 2], "secret": ["a", "b"]})
+    df.write_parquet(tmp_path / "left.parquet")
+    df.write_parquet(tmp_path / "right.parquet")
 
     with pytest.warns(FutureWarning, match="--hidden-columns.*deprecated"):
         result = runner.invoke(
