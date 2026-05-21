@@ -19,7 +19,7 @@ from diffly.summary import WIDTH
 
 from ._compat import dy
 from .comparison import DataFrameComparison, compare_frames
-from .metrics import Metric
+from .metrics import MetricFn
 
 
 def assert_collection_equal(
@@ -40,7 +40,7 @@ def assert_collection_equal(
     right_name: str = Side.RIGHT,
     slim: bool = False,
     hidden_columns: list[str] | None = None,
-    metrics: Mapping[str, Metric] | None = None,
+    metrics: Mapping[str, MetricFn] | None = None,
 ) -> None:
     """Assert that two :mod:`dataframely` collections are equal.
 
@@ -174,7 +174,7 @@ def assert_frame_equal(
     right_name: str = Side.RIGHT,
     slim: bool = False,
     hidden_columns: list[str] | None = None,
-    metrics: Mapping[str, Metric] | None = None,
+    metrics: Mapping[str, MetricFn] | None = None,
 ) -> None:
     """Assert that two :mod:`polars` data frames are equal.
 

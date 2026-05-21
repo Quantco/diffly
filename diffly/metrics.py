@@ -11,18 +11,18 @@ import polars.selectors as cs
 
 
 @dataclass(frozen=True)
-class _Metric:
-    """A metric paired with a column-applicability selector.
+class Metric:
+    """A metric function paired with a column-applicability selector.
 
     Internal only.
     """
 
-    fn: Metric
+    fn: MetricFn
     selector: cs.Selector
 
 
-Metric = Callable[[pl.Expr, pl.Expr], pl.Expr]
-"""A metric is a callable mapping ``(left_expr, right_expr)`` to a scalar aggregation
+MetricFn = Callable[[pl.Expr, pl.Expr], pl.Expr]
+"""A metric function maps ``(left_expr, right_expr)`` to a scalar aggregation
 expression.
 
 The expressions refer to the left-side and right-side values of a single column across
@@ -30,8 +30,8 @@ all joined rows.
 """
 
 
-def _make_numeric_metric(metric: Metric) -> _Metric:
-    return _Metric(fn=metric, selector=cs.numeric())
+def _make_numeric_metric(fn: MetricFn) -> Metric:
+    return Metric(fn=fn, selector=cs.numeric())
 
 
 def mean(left: pl.Expr, right: pl.Expr) -> pl.Expr:
@@ -70,7 +70,7 @@ def mean_relative_deviation(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     return ((right - left) / left).abs().mean()
 
 
-def quantile(q: float) -> Metric:
+def quantile(q: float) -> MetricFn:
     """Factory returning a metric that computes the ``q``-quantile of
     ``right - left``."""
     if not 0 <= q <= 1:
@@ -82,7 +82,7 @@ def quantile(q: float) -> Metric:
     return _quantile
 
 
-DEFAULT_METRICS: dict[str, Metric] = {
+DEFAULT_METRICS: dict[str, MetricFn] = {
     "Mean": mean,
     "Median": median,
     "Min": min,

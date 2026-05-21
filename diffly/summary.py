@@ -23,7 +23,7 @@ from rich.table import Table
 from rich.text import Text
 
 from ._utils import Side, capitalize_first
-from .metrics import _Metric
+from .metrics import Metric
 
 if TYPE_CHECKING:  # pragma: no cover
     from .comparison import DataFrameComparison
@@ -61,7 +61,7 @@ class Summary:
         right_name: str,
         slim: bool,
         hidden_columns: list[str] | None,
-        metrics: Mapping[str, _Metric] | None,
+        metrics: Mapping[str, Metric] | None,
     ):
         self.slim = slim
         self._data = _compute_summary_data(
@@ -772,7 +772,7 @@ def _compute_summary_data(
     right_name: str,
     slim: bool,
     hidden_columns: list[str] | None,
-    metrics: Mapping[str, _Metric] | None,
+    metrics: Mapping[str, Metric] | None,
 ) -> SummaryData:
     from .comparison import DataFrameComparison
 
@@ -839,7 +839,7 @@ def _compute_summary_data(
             _metric_labels=[],
         )
 
-    metrics_resolved: dict[str, _Metric] = dict(metrics or {})
+    metrics_resolved: dict[str, Metric] = dict(metrics or {})
     metrics_by_column = _compute_column_metrics(comp, metrics_resolved)
     metric_labels = list(metrics_resolved.keys())
 
@@ -935,7 +935,7 @@ def _compute_rows(comp: DataFrameComparison, slim: bool) -> SummaryDataRows | No
 
 def _compute_column_metrics(
     comp: DataFrameComparison,
-    metrics: Mapping[str, _Metric],
+    metrics: Mapping[str, Metric],
 ) -> dict[str, dict[str, Any]]:
     if comp.primary_key is None or comp.num_rows_joined() == 0:
         return {}

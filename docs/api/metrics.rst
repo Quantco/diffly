@@ -6,11 +6,11 @@ Metrics
 
 Metrics are scalar aggregations computed per numerical column when generating a
 :meth:`~diffly.comparison.DataFrameComparison.summary`. Pass them via the
-``metrics`` argument as a mapping from display label to a :data:`Metric`
+``metrics`` argument as a mapping from display label to a :data:`MetricFn`
 callable. :mod:`diffly.metrics` ships a set of presets; you can also supply
 your own callable ``(left_expr, right_expr) -> pl.Expr``.
 
-.. autodata:: Metric
+.. autodata:: MetricFn
    :no-value:
 
 Presets

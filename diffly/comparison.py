@@ -25,7 +25,7 @@ from ._utils import (
     lazy_len,
     make_and_validate_mapping,
 )
-from .metrics import Metric, make_numeric_metric
+from .metrics import MetricFn, _make_numeric_metric
 
 if TYPE_CHECKING:  # pragma: no cover
     # NOTE: We cannot import at runtime as we're otherwise running into circular
@@ -920,7 +920,7 @@ class DataFrameComparison:
         right_name: str = Side.RIGHT,
         slim: bool = False,
         hidden_columns: list[str] | None = None,
-        metrics: Mapping[str, Metric] | None = None,
+        metrics: Mapping[str, MetricFn] | None = None,
     ) -> Summary:
         """Generate a summary of all aspects of the comparison.
 
@@ -955,7 +955,7 @@ class DataFrameComparison:
                 :class:`polars.Expr` referring to the left and right values of a single
                 numerical column across all joined rows, and must return a scalar
                 aggregation expression. See :doc:`/api/metrics` for the full list of
-                presets and the :data:`~diffly.metrics.Metric` type. When ``None``
+                presets and the :data:`~diffly.metrics.MetricFn` type. When ``None``
                 (default), no metrics are computed; presets are not applied
                 automatically. Metrics are only computed for numerical columns. Prefer
                 short labels — the summary has a fixed width and many or long labels
@@ -976,7 +976,7 @@ class DataFrameComparison:
         from .summary import Summary
 
         resolved_metrics = (
-            {label: make_numeric_metric(fn) for label, fn in metrics.items()}
+            {label: _make_numeric_metric(fn) for label, fn in metrics.items()}
             if metrics is not None
             else None
         )

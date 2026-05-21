@@ -7,7 +7,7 @@ import polars as pl
 import pytest
 
 from diffly import metrics
-from diffly.metrics import Metric
+from diffly.metrics import MetricFn
 
 
 @pytest.fixture
@@ -16,7 +16,7 @@ def frame() -> pl.DataFrame:
     return pl.DataFrame({"l": [1, 2, 3, None], "r": [1, 2, 5, 4]})
 
 
-def _apply(metric: Metric, frame: pl.DataFrame) -> float:
+def _apply(metric: MetricFn, frame: pl.DataFrame) -> float:
     return frame.select(metric(pl.col("l"), pl.col("r"))).item()
 
 
