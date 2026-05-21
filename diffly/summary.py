@@ -23,7 +23,7 @@ from rich.table import Table
 from rich.text import Text
 
 from ._utils import Side, capitalize_first
-from .metrics import Metric, _make_numeric_metric
+from .metrics import _Metric
 
 if TYPE_CHECKING:  # pragma: no cover
     from .comparison import DataFrameComparison
@@ -61,7 +61,7 @@ class Summary:
         right_name: str,
         slim: bool,
         hidden_columns: list[str] | None,
-        metrics: Mapping[str, Metric] | None,
+        metrics: Mapping[str, _Metric] | None,
     ):
         self.slim = slim
         self._data = _compute_summary_data(
@@ -772,7 +772,7 @@ def _compute_summary_data(
     right_name: str,
     slim: bool,
     hidden_columns: list[str] | None,
-    metrics: Mapping[str, Metric] | None,
+    metrics: Mapping[str, _Metric] | None,
 ) -> SummaryData:
     from .comparison import DataFrameComparison
 
@@ -839,7 +839,7 @@ def _compute_summary_data(
             _metric_labels=[],
         )
 
-    metrics_resolved: dict[str, Metric] = dict(metrics or {})
+    metrics_resolved: dict[str, _Metric] = dict(metrics or {})
     metrics_by_column = _compute_column_metrics(comp, metrics_resolved)
     metric_labels = list(metrics_resolved.keys())
 
@@ -935,12 +935,10 @@ def _compute_rows(comp: DataFrameComparison, slim: bool) -> SummaryDataRows | No
 
 def _compute_column_metrics(
     comp: DataFrameComparison,
-    metrics: Mapping[str, Metric],
+    metrics: Mapping[str, _Metric],
 ) -> dict[str, dict[str, Any]]:
     if comp.primary_key is None or comp.num_rows_joined() == 0:
         return {}
-
-    _metrics = {label: _make_numeric_metric(m) for label, m in metrics.items()}
 
     def select_columns(selector: cs.Selector) -> set[str]:
         left = set(cs.expand_selector(comp.left_schema, selector))
@@ -948,7 +946,7 @@ def _compute_column_metrics(
         return (left & right) & set(comp._other_common_columns)
 
     metric_to_columns = {
-        label: select_columns(m.selector) for label, m in _metrics.items()
+        label: select_columns(m.selector) for label, m in metrics.items()
     }
 
     all_columns = sorted(set().union(*metric_to_columns.values()))
@@ -962,7 +960,7 @@ def _compute_column_metrics(
             pl.col(f"{column}_{Side.LEFT}"),
             pl.col(f"{column}_{Side.RIGHT}"),
         ).alias(f"{label}__{column}")
-        for label, metric in _metrics.items()
+        for label, metric in metrics.items()
         for column in sorted(metric_to_columns[label])
     ]
     row = joined.select(agg_exprs).collect().row(0, named=True)

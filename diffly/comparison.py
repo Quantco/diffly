@@ -25,7 +25,7 @@ from ._utils import (
     lazy_len,
     make_and_validate_mapping,
 )
-from .metrics import Metric
+from .metrics import Metric, make_numeric_metric
 
 if TYPE_CHECKING:  # pragma: no cover
     # NOTE: We cannot import at runtime as we're otherwise running into circular
@@ -975,6 +975,12 @@ class DataFrameComparison:
         # NOTE: We're importing here to prevent circular imports
         from .summary import Summary
 
+        resolved_metrics = (
+            {label: make_numeric_metric(fn) for label, fn in metrics.items()}
+            if metrics is not None
+            else None
+        )
+
         return Summary(
             self,
             show_perfect_column_matches=show_perfect_column_matches,
@@ -985,7 +991,7 @@ class DataFrameComparison:
             right_name=right_name,
             slim=slim,
             hidden_columns=hidden_columns,
-            metrics=metrics,
+            metrics=resolved_metrics,
         )
 
     # ----------------------------------- UTILITIES ----------------------------------- #
