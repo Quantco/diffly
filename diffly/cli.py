@@ -11,6 +11,7 @@ from diffly import compare_frames
 
 from ._compat import typer
 from ._utils import ABS_TOL_DEFAULT, ABS_TOL_TEMPORAL_DEFAULT, REL_TOL_DEFAULT
+from .metrics import DEFAULT_METRICS
 
 app = typer.Typer()
 
@@ -129,8 +130,24 @@ def main(
             )
         ),
     ] = [],
+    metric: Annotated[
+        list[str],
+        typer.Option(
+            help=(
+                "Metric presets to display per numerical column. Repeatable. "
+                f"Available: {', '.join(DEFAULT_METRICS)}."
+            )
+        ),
+    ] = [],
 ) -> None:
     """Compare two `parquet` files and print the comparison result."""
+    for name in metric:
+        if name not in DEFAULT_METRICS:
+            raise typer.BadParameter(
+                f"Unknown metric: {name!r}. Available: {', '.join(DEFAULT_METRICS)}."
+            )
+    metrics = {name: DEFAULT_METRICS[name] for name in metric}
+
     comparison = compare_frames(
         pl.scan_parquet(left),
         pl.scan_parquet(right),
@@ -148,6 +165,7 @@ def main(
         right_name=right_name,
         slim=slim,
         hidden_columns=hidden_columns,
+        metrics=metrics,
     )
     if output_json:
         typer.echo(summary.to_json())

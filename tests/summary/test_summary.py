@@ -11,7 +11,7 @@ from typing import Any
 import polars as pl
 import pytest
 
-from diffly import compare_frames
+from diffly import compare_frames, metrics
 from diffly.comparison import DataFrameComparison
 from diffly.summary import _format_fraction_as_percentage, to_json_safe
 
@@ -155,10 +155,18 @@ def _make_comparison() -> DataFrameComparison:
 
 
 @pytest.mark.parametrize(
-    "show_perfect_column_matches, show_top_column_changes, slim, sample_rows, sample_pk, hide_value",
+    "show_perfect_column_matches, show_top_column_changes, slim, sample_rows, sample_pk, hide_value, with_metrics",
     [
-        (combo[0], combo[1], combo[2], combo[3], combo[3] and combo[1], combo[4])
-        for combo in itertools.product([True, False], repeat=5)
+        (
+            combo[0],
+            combo[1],
+            combo[2],
+            combo[3],
+            combo[3] and combo[1],
+            combo[4],
+            combo[5],
+        )
+        for combo in itertools.product([True, False], repeat=6)
     ],
 )
 def test_summary_data_parametrized(
@@ -168,10 +176,12 @@ def test_summary_data_parametrized(
     sample_rows: bool,
     sample_pk: bool,
     hide_value: bool,
+    with_metrics: bool,
 ) -> None:
     comp = _make_comparison()
     top_k = 3 if show_top_column_changes else 0
     hidden_columns = ["value"] if hide_value else None
+    metrics_arg = {"Mean": metrics.mean, "Max": metrics.max} if with_metrics else None
     summary = comp.summary(
         show_perfect_column_matches=show_perfect_column_matches,
         top_k_column_changes=top_k,
@@ -179,6 +189,7 @@ def test_summary_data_parametrized(
         show_sample_primary_key_per_change=sample_pk,
         slim=slim,
         hidden_columns=hidden_columns,
+        metrics=metrics_arg,
     )
     result = json.loads(summary.to_json())
 
@@ -216,11 +227,19 @@ def test_summary_data_parametrized(
             if show_value_changes
             else None
         ),
+        # Joined rows (id=1,2,3): value deltas = [0, 5, 0].
+        "metrics": {"Mean": pytest.approx(5 / 3), "Max": 5.0} if with_metrics else None,
     }
     expected_columns = []
     if show_perfect_column_matches:
         expected_columns.append(
-            {"name": "status", "match_rate": 1.0, "n_total_changes": 0, "changes": None}
+            {
+                "name": "status",
+                "match_rate": 1.0,
+                "n_total_changes": 0,
+                "changes": None,
+                "metrics": None,
+            }
         )
     expected_columns.append(value_col)
 
