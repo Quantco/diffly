@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import datetime as dt
+import warnings
 from pathlib import Path
 from typing import Annotated
 
@@ -121,7 +122,7 @@ def main(
             ),
         ),
     ] = False,
-    hidden_columns: Annotated[
+    hidden_column: Annotated[
         list[str],
         typer.Option(
             help=(
@@ -129,6 +130,10 @@ def main(
                 "sensitive information."
             )
         ),
+    ] = [],
+    hidden_columns: Annotated[
+        list[str],
+        typer.Option(hidden=True),
     ] = [],
     metric: Annotated[
         list[str],
@@ -141,6 +146,13 @@ def main(
     ] = [],
 ) -> None:
     """Compare two `parquet` files and print the comparison result."""
+    if hidden_columns:
+        warnings.warn(
+            "`--hidden-columns` is deprecated, use `--hidden-column` instead.",
+            FutureWarning,
+        )
+        hidden_column = [*hidden_column, *hidden_columns]
+
     for name in metric:
         if name not in DEFAULT_METRICS:
             raise typer.BadParameter(
@@ -164,7 +176,7 @@ def main(
         left_name=left_name,
         right_name=right_name,
         slim=slim,
-        hidden_columns=hidden_columns,
+        hidden_columns=hidden_column,
         metrics=metrics,
     )
     if output_json:
