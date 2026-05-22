@@ -25,6 +25,7 @@ from ._utils import (
     lazy_len,
     make_and_validate_mapping,
 )
+from .metrics import MetricFn, _make_numeric_metric
 
 if TYPE_CHECKING:  # pragma: no cover
     # NOTE: We cannot import at runtime as we're otherwise running into circular
@@ -919,6 +920,7 @@ class DataFrameComparison:
         right_name: str = Side.RIGHT,
         slim: bool = False,
         hidden_columns: list[str] | None = None,
+        metrics: Mapping[str, MetricFn] | None = None,
     ) -> Summary:
         """Generate a summary of all aspects of the comparison.
 
@@ -948,6 +950,16 @@ class DataFrameComparison:
                 advanced users who are familiar with the summary format.
             hidden_columns: Columns for which no values are printed, e.g. because they
                 contain sensitive information.
+            metrics: Optional mapping from display label to a metric callable
+                ``(left_expr, right_expr) -> pl.Expr``. Each callable receives two
+                :class:`polars.Expr` referring to the left and right values of a single
+                numerical column across all joined rows, and must return a scalar
+                aggregation expression. See :doc:`/api/metrics` for the full list of
+                presets and the :data:`~diffly.metrics.MetricFn` type. When ``None``
+                (default), no metrics are computed; presets are not applied
+                automatically. Metrics are only computed for numerical columns. Prefer
+                short labels — the summary has a fixed width and many or long labels
+                degrade rendering.
 
         Returns:
             A summary which can be printed or written to a file.
@@ -963,6 +975,12 @@ class DataFrameComparison:
         # NOTE: We're importing here to prevent circular imports
         from .summary import Summary
 
+        resolved_metrics = (
+            {label: _make_numeric_metric(fn) for label, fn in metrics.items()}
+            if metrics is not None
+            else None
+        )
+
         return Summary(
             self,
             show_perfect_column_matches=show_perfect_column_matches,
@@ -973,6 +991,7 @@ class DataFrameComparison:
             right_name=right_name,
             slim=slim,
             hidden_columns=hidden_columns,
+            metrics=resolved_metrics,
         )
 
     # ----------------------------------- UTILITIES ----------------------------------- #

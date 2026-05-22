@@ -78,3 +78,24 @@ def test_cli_hidden_columns_alias_warns(tmp_path: Path) -> None:
         )
 
     assert result.exit_code == 0
+
+
+def test_cli_unknown_metric(tmp_path: Path) -> None:
+    left = pl.DataFrame({"id": [1, 2], "x": [1.0, 2.0]})
+    right = pl.DataFrame({"id": [1, 2], "x": [1.0, 3.0]})
+    left.write_parquet(tmp_path / "left.parquet")
+    right.write_parquet(tmp_path / "right.parquet")
+
+    result = runner.invoke(
+        app,
+        [
+            str(tmp_path / "left.parquet"),
+            str(tmp_path / "right.parquet"),
+            "--primary-key",
+            "id",
+            "--metric",
+            "bogus",
+        ],
+    )
+    assert result.exit_code != 0
+    assert "Unknown metric" in result.output
