@@ -181,7 +181,7 @@ def test_summary_data_parametrized(
     comp = _make_comparison()
     top_k = 3 if show_top_column_changes else 0
     hidden_columns = ["value"] if hide_value else None
-    metrics_arg = {"Mean": metrics.mean, "Max": metrics.max} if with_metrics else None
+    metrics_arg = {"ΔMean": metrics.mean, "ΔMax": metrics.max} if with_metrics else None
     summary = comp.summary(
         show_perfect_column_matches=show_perfect_column_matches,
         top_k_column_changes=top_k,
@@ -227,8 +227,12 @@ def test_summary_data_parametrized(
             if show_value_changes
             else None
         ),
-        # Joined rows (id=1,2,3): value deltas = [0, 5, 0].
-        "metrics": {"Mean": pytest.approx(5 / 3), "Max": 5.0} if with_metrics else None,
+        # Joined rows (id=1,2,3): left value = [10, 20, 30], right value = [10, 25, 30].
+        "metrics": (
+            {"ΔMean": "20.0 -> 21.67 (+1.667)", "ΔMax": "30.0 -> 30.0 (+0.0)"}
+            if with_metrics
+            else None
+        ),
     }
     expected_columns = []
     if show_perfect_column_matches:

@@ -12,7 +12,7 @@ from diffly.metrics import MetricFn
 
 @pytest.fixture
 def frame() -> pl.DataFrame:
-    # deltas (right - left): [0, 0, 2, null]
+    # left: [1, 2, 3, null]; right: [1, 2, 5, 4]
     return pl.DataFrame({"l": [1, 2, 3, None], "r": [1, 2, 5, 4]})
 
 
@@ -21,29 +21,28 @@ def _apply(metric: MetricFn, frame: pl.DataFrame) -> float:
 
 
 def test_mean(frame: pl.DataFrame) -> None:
-    assert _apply(metrics.mean, frame) == pytest.approx(2 / 3)
+    # mean(left) = 2.0; mean(right) = 3.0; delta = +1.0
+    assert _apply(metrics.mean, frame) == "2.0 -> 3.0 (+1.0)"
 
 
 def test_median(frame: pl.DataFrame) -> None:
-    assert _apply(metrics.median, frame) == 0
+    # median(left) over [1, 2, 3] = 2.0; median(right) over [1, 2, 4, 5] = 3.0
+    assert _apply(metrics.median, frame) == "2.0 -> 3.0 (+1.0)"
 
 
 def test_min(frame: pl.DataFrame) -> None:
-    assert _apply(metrics.min, frame) == 0
+    # min(left) = 1; min(right) = 1; delta = 0
+    assert _apply(metrics.min, frame) == "1 -> 1 (+0)"
 
 
 def test_max(frame: pl.DataFrame) -> None:
-    assert _apply(metrics.max, frame) == 2
+    # max(left) = 3; max(right) = 5; delta = +2
+    assert _apply(metrics.max, frame) == "3 -> 5 (+2)"
 
 
 def test_std(frame: pl.DataFrame) -> None:
-    sample_mean = 2 / 3
-    assert _apply(metrics.std, frame) == pytest.approx(
-        math.sqrt(
-            ((0 - sample_mean) ** 2 + (0 - sample_mean) ** 2 + (2 - sample_mean) ** 2)
-            / 2
-        )
-    )
+    # std(left) over [1, 2, 3] = 1.0; std(right) over [1, 2, 5, 4] ≈ 1.826; delta ≈ +0.826
+    assert _apply(metrics.std, frame) == "1.0 -> 1.826 (+0.8257)"
 
 
 def test_mean_absolute_deviation() -> None:
@@ -83,9 +82,9 @@ def test_null_fraction_change_non_numeric() -> None:
 
 
 def test_quantile(frame: pl.DataFrame) -> None:
-    # deltas [0, 0, 2]: p50 = 0, p100 = 2
-    assert _apply(metrics.quantile(0.5), frame) == 0
-    assert _apply(metrics.quantile(1.0), frame) == 2
+    # left [1, 2, 3]: p50 = 2, p100 = 3; right [1, 2, 5, 4]: p50 = 4, p100 = 5
+    assert _apply(metrics.quantile(0.5), frame) == "2.0 -> 4.0 (+2.0)"
+    assert _apply(metrics.quantile(1.0), frame) == "3.0 -> 5.0 (+2.0)"
 
 
 def test_quantile_out_of_range() -> None:

@@ -31,48 +31,23 @@ def _make_numeric_metric(fn: MetricFn) -> Metric:
     return Metric(fn=fn, selector=cs.numeric())
 
 
-def mean(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Mean of ``right - left``."""
-    return (right - left).mean()
+# ------------------------------------ FORMATTING ------------------------------------ #
 
 
-def median(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Median of ``right - left``."""
-    return (right - left).median()
-
-
-def min(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Minimum of ``right - left``."""
-    return (right - left).min()
-
-
-def max(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Maximum of ``right - left``."""
-    return (right - left).max()
-
-
-def std(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Standard deviation of ``right - left``."""
-    return (right - left).std()
-
-
-def mean_absolute_deviation(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Mean of ``|right - left|``."""
-    return (right - left).abs().mean()
-
-
-def mean_relative_deviation(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Mean of ``|(right - left) / left|``. Yields ``inf`` or ``null`` where
-    ``left`` is zero."""
-    return ((right - left) / left).abs().mean()
-
-
-def _percentage_string(fraction: pl.Expr, *, signed: bool = False) -> pl.Expr:
+def _percentage_string(value: pl.Expr, *, signed: bool = False) -> pl.Expr:
     """Format a fraction as a percentage string, optionally with an explicit sign."""
-    pct = (fraction * 100).round(2)
+    pct = (value * 100).round(2)
     body = pl.format("{}%", pct)
     if signed:
         return pl.when(pct >= 0).then(pl.format("+{}", body)).otherwise(body)
+    return body
+
+
+def _number_string(value: pl.Expr, *, signed: bool = False) -> pl.Expr:
+    """Format a numeric value to four significant figures, optionally with a sign."""
+    body = value.round_sig_figs(4).cast(pl.String)
+    if signed:
+        return pl.when(value >= 0).then(pl.format("+{}", body)).otherwise(body)
     return body
 
 
@@ -95,6 +70,53 @@ def _render_change(
     )
 
 
+def _render_number_change(old: pl.Expr, new: pl.Expr) -> pl.Expr:
+    """Render a numeric change as ``<old> -> <new> (<delta>)``."""
+    return _render_change(
+        old, new, lambda value, signed: _number_string(value, signed=signed)
+    )
+
+
+# -------------------------------------- METRICS ------------------------------------- #
+
+
+def mean(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Change in mean, rendered as ``<mean(left)> -> <mean(right)> (<delta>)``."""
+    return _render_number_change(left.mean(), right.mean())
+
+
+def median(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Change in median, rendered as ``<median(left)> -> <median(right)> (<delta>)``."""
+    return _render_number_change(left.median(), right.median())
+
+
+def min(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Change in minimum, rendered as ``<min(left)> -> <min(right)> (<delta>)``."""
+    return _render_number_change(left.min(), right.min())
+
+
+def max(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Change in maximum, rendered as ``<max(left)> -> <max(right)> (<delta>)``."""
+    return _render_number_change(left.max(), right.max())
+
+
+def std(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Change in standard deviation, rendered as ``<std(left)> -> <std(right)>
+    (<delta>)``."""
+    return _render_number_change(left.std(), right.std())
+
+
+def mean_absolute_deviation(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Mean of ``|right - left|``."""
+    return (right - left).abs().mean()
+
+
+def mean_relative_deviation(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Mean of ``|(right - left) / left|``. Yields ``inf`` or ``null`` where
+    ``left`` is zero."""
+    return ((right - left) / left).abs().mean()
+
+
 def null_fraction_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     """Change in the fraction of null entries, rendered as ``<old> -> <new> (<delta>)``.
 
@@ -111,23 +133,23 @@ def null_fraction_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
 
 
 def quantile(q: float) -> MetricFn:
-    """Factory returning a metric that computes the ``q``-quantile of
-    ``right - left``."""
+    """Factory returning a metric for the change in the ``q``-quantile, rendered as
+    ``<quantile(left)> -> <quantile(right)> (<delta>)``."""
     if not 0 <= q <= 1:
         raise ValueError(f"q must be in [0, 1], got {q}")
 
     def _quantile(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-        return (right - left).quantile(q)
+        return _render_number_change(left.quantile(q), right.quantile(q))
 
     return _quantile
 
 
 DEFAULT_METRICS: dict[str, MetricFn | Metric] = {
-    "Mean": mean,
-    "Median": median,
-    "Min": min,
-    "Max": max,
-    "Std": std,
+    "ΔMean": mean,
+    "ΔMedian": median,
+    "ΔMin": min,
+    "ΔMax": max,
+    "ΔStd": std,
     "Mean absolute deviation": mean_absolute_deviation,
     "Mean relative deviation": mean_relative_deviation,
     "ΔNull%": Metric(fn=null_fraction_change, selector=cs.all()),
