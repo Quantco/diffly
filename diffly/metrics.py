@@ -145,12 +145,12 @@ def quantile(q: float) -> MetricFn:
 
 
 DEFAULT_METRICS: dict[str, MetricFn | Metric] = {
-    "ΔMean": mean,
-    "ΔMedian": median,
-    "ΔMin": min,
-    "ΔMax": max,
-    "ΔStd": std,
+    "Mean": mean,
+    "Median": median,
+    "Min": min,
+    "Max": max,
+    "Std": std,
     "Mean absolute deviation": mean_absolute_deviation,
     "Mean relative deviation": mean_relative_deviation,
-    "ΔNull%": Metric(fn=null_fraction_change, selector=cs.all()),
+    "Null%": Metric(fn=null_fraction_change, selector=cs.all()),
 }

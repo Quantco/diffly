@@ -94,11 +94,11 @@ def test_cli_null_fraction_metric(tmp_path: Path) -> None:
             "--primary-key",
             "id",
             "--metric",
-            "ΔNull%",
+            "Null%",
         ],
     )
     assert result.exit_code == 0
-    assert "ΔNull%" in result.output
+    assert "Null%" in result.output
 
 
 def test_cli_unknown_metric(tmp_path: Path) -> None:

@@ -181,7 +181,7 @@ def test_summary_data_parametrized(
     comp = _make_comparison()
     top_k = 3 if show_top_column_changes else 0
     hidden_columns = ["value"] if hide_value else None
-    metrics_arg = {"ΔMean": metrics.mean, "ΔMax": metrics.max} if with_metrics else None
+    metrics_arg = {"Mean": metrics.mean, "Max": metrics.max} if with_metrics else None
     summary = comp.summary(
         show_perfect_column_matches=show_perfect_column_matches,
         top_k_column_changes=top_k,
@@ -229,7 +229,7 @@ def test_summary_data_parametrized(
         ),
         # Joined rows (id=1,2,3): left value = [10, 20, 30], right value = [10, 25, 30].
         "metrics": (
-            {"ΔMean": "20.0 -> 21.67 (+1.667)", "ΔMax": "30.0 -> 30.0 (+0.0)"}
+            {"Mean": "20.0 -> 21.67 (+1.667)", "Max": "30.0 -> 30.0 (+0.0)"}
             if with_metrics
             else None
         ),
