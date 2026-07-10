@@ -68,19 +68,19 @@ def test_mean_relative_deviation_div_by_zero() -> None:
 def test_null_fraction_change() -> None:
     # left nulls: 1/4 = 25%; right nulls: 3/4 = 75%; delta = +50%
     frame = pl.DataFrame({"l": [1, None, 3, 4], "r": [None, None, 3, None]})
-    assert _apply(metrics.null_fraction_change, frame) == "25.0% -> 75.0% (+50.0%)"
+    assert _apply(metrics.null_fraction_change, frame) == "25.0% -> 75.0% (+50.0)"
 
 
 def test_null_fraction_change_negative_delta() -> None:
     # left nulls: 1/2 = 50%; right nulls: 0%; delta = -50%
     frame = pl.DataFrame({"l": [1, None], "r": [1, 2]})
-    assert _apply(metrics.null_fraction_change, frame) == "50.0% -> 0.0% (-50.0%)"
+    assert _apply(metrics.null_fraction_change, frame) == "50.0% -> 0.0% (-50.0)"
 
 
 def test_null_fraction_change_non_numeric() -> None:
     # Applies to any column type; here strings. left nulls: 0%; right nulls: 50%
     frame = pl.DataFrame({"l": ["a", "b"], "r": ["a", None]})
-    assert _apply(metrics.null_fraction_change, frame) == "0.0% -> 50.0% (+50.0%)"
+    assert _apply(metrics.null_fraction_change, frame) == "0.0% -> 50.0% (+50.0)"
 
 
 def test_quantile(frame: pl.DataFrame) -> None:
