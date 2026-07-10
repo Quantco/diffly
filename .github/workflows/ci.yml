@@ -23,7 +23,7 @@ jobs:
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@5185adfbffb4bd703da3010310260805d89ebb11 # v0.9.6
         with:
-          environments: default lint
+          environments: default lint py311
       - name: Install repository
         run: pixi run -e default postinstall
       - name: pre-commit
