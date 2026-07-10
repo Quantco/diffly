@@ -34,10 +34,12 @@ def _make_numeric_metric(fn: MetricFn) -> Metric:
 # ------------------------------------ FORMATTING ------------------------------------ #
 
 
-def _percentage_string(value: pl.Expr, *, signed: bool = False) -> pl.Expr:
+def _percentage_string(
+    fraction: pl.Expr, *, signed: bool = False, percent_sign: bool = True
+) -> pl.Expr:
     """Format a fraction as a percentage string, optionally with an explicit sign."""
-    pct = (value * 100).round(2)
-    body = pl.format("{}%", pct)
+    pct = (fraction * 100).round(2)
+    body = pl.format("{}%", pct) if percent_sign else pl.format("{}", pct)
     if signed:
         return pl.when(pct >= 0).then(pl.format("+{}", body)).otherwise(body)
     return body
@@ -128,7 +130,9 @@ def null_fraction_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     return _render_change(
         left.is_null().mean(),
         right.is_null().mean(),
-        lambda value, signed: _percentage_string(value, signed=signed),
+        lambda value, signed: _percentage_string(
+            value, signed=signed, percent_sign=not signed
+        ),
     )
 
 

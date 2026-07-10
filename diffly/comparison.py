@@ -957,9 +957,8 @@ class DataFrameComparison:
                 column across all joined rows, and must return a scalar aggregation
                 expression. Bare callables are only computed for numerical columns; wrap
                 one in a :class:`~diffly.metrics.Metric` with a column selector to target
-                other column types (e.g. ``Metric(fn, selector=cs.all())``.
+                other column types (e.g. ``Metric(fn, selector=cs.all())``).
                 See :doc:`/api/metrics` for the full list of presets and the
-                :data:`~diffly.metrics.MetricFn` type. When ``None`` (default), no metrics
                 are computed; presets are not applied automatically. Prefer short labels
                 — the summary has a fixed width and many or long labels degrade rendering.
 
