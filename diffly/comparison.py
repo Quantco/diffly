@@ -25,7 +25,7 @@ from ._utils import (
     lazy_len,
     make_and_validate_mapping,
 )
-from .metrics import MetricFn, _make_numeric_metric
+from .metrics import Metric, MetricFn, _make_numeric_metric
 
 if TYPE_CHECKING:  # pragma: no cover
     # NOTE: We cannot import at runtime as we're otherwise running into circular
@@ -920,7 +920,7 @@ class DataFrameComparison:
         right_name: str = Side.RIGHT,
         slim: bool = False,
         hidden_columns: list[str] | None = None,
-        metrics: Mapping[str, MetricFn] | None = None,
+        metrics: Mapping[str, MetricFn | Metric] | None = None,
     ) -> Summary:
         """Generate a summary of all aspects of the comparison.
 
@@ -950,16 +950,19 @@ class DataFrameComparison:
                 advanced users who are familiar with the summary format.
             hidden_columns: Columns for which no values are printed, e.g. because they
                 contain sensitive information.
-            metrics: Optional mapping from display label to a metric callable
-                ``(left_expr, right_expr) -> pl.Expr``. Each callable receives two
+            metrics: Optional mapping from display label to a metric. A value may be a
+                callable ``(left_expr, right_expr) -> pl.Expr`` or a
+                :class:`~diffly.metrics.Metric`. Each callable receives two
                 :class:`polars.Expr` referring to the left and right values of a single
-                numerical column across all joined rows, and must return a scalar
-                aggregation expression. See :doc:`/api/metrics` for the full list of
-                presets and the :data:`~diffly.metrics.MetricFn` type. When ``None``
-                (default), no metrics are computed; presets are not applied
-                automatically. Metrics are only computed for numerical columns. Prefer
-                short labels — the summary has a fixed width and many or long labels
-                degrade rendering.
+                column across all joined rows, and must return a scalar aggregation
+                expression. Bare callables are only computed for numerical columns; wrap
+                one in a :class:`~diffly.metrics.Metric` with a column selector to target
+                other column types (e.g. ``Metric(fn, selector=cs.all())`` for a
+                null-fraction metric across all columns). See :doc:`/api/metrics` for the
+                full list of presets and the :data:`~diffly.metrics.MetricFn` type. When
+                ``None`` (default), no metrics are computed; presets are not applied
+                automatically. Prefer short labels — the summary has a fixed width and
+                many or long labels degrade rendering.
 
         Returns:
             A summary which can be printed or written to a file.
@@ -976,7 +979,10 @@ class DataFrameComparison:
         from .summary import Summary
 
         resolved_metrics = (
-            {label: _make_numeric_metric(fn) for label, fn in metrics.items()}
+            {
+                label: v if isinstance(v, Metric) else _make_numeric_metric(v)
+                for label, v in metrics.items()
+            }
             if metrics is not None
             else None
         )

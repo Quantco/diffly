@@ -64,6 +64,18 @@ def test_mean_relative_deviation_div_by_zero() -> None:
     assert math.isinf(_apply(metrics.mean_relative_deviation, frame))
 
 
+def test_null_fraction_change() -> None:
+    # left nulls: 1/3; right nulls: 2/3; change = 2/3 - 1/3 = 1/3
+    frame = pl.DataFrame({"l": [1, None, 3], "r": [None, None, 3]})
+    assert _apply(metrics.null_fraction_change, frame) == pytest.approx(1 / 3)
+
+
+def test_null_fraction_change_non_numeric() -> None:
+    # Applies to any column type; here strings. left nulls: 0; right nulls: 1/2
+    frame = pl.DataFrame({"l": ["a", "b"], "r": ["a", None]})
+    assert _apply(metrics.null_fraction_change, frame) == pytest.approx(1 / 2)
+
+
 def test_quantile(frame: pl.DataFrame) -> None:
     # deltas [0, 0, 2]: p50 = 0, p100 = 2
     assert _apply(metrics.quantile(0.5), frame) == 0
