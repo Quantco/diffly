@@ -72,13 +72,31 @@ def mean_relative_deviation(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     return ((right - left) / left).abs().mean()
 
 
-def null_fraction_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Change in the fraction of null entries, ``right - left``.
+def _percentage_string(fraction: pl.Expr, *, signed: bool = False) -> pl.Expr:
+    """Format a fraction as a percentage string, optionally with an explicit sign."""
+    pct = (fraction * 100).round(2)
+    body = pl.format("{}%", pct)
+    if signed:
+        return pl.when(pct >= 0).then(pl.format("+{}", body)).otherwise(body)
+    return body
 
-    A positive value means the right side has proportionally more nulls than the left.
-    Unlike the other presets, this applies to columns of any type.
+
+def null_fraction_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Change in the fraction of null entries, rendered as ``<old> -> <new> (<delta>)``.
+
+    ``old`` and ``new`` are the null percentages of the left and right side, and
+    ``delta`` is their signed difference (``+`` when the right side has proportionally
+    more nulls, ``-`` when it has fewer). Unlike the other presets, this applies to
+    columns of any type.
     """
-    return right.is_null().mean() - left.is_null().mean()
+    old = left.is_null().mean()
+    new = right.is_null().mean()
+    return pl.format(
+        "{} -> {} ({})",
+        _percentage_string(old),
+        _percentage_string(new),
+        _percentage_string(new - old, signed=True),
+    )
 
 
 def quantile(q: float) -> MetricFn:
