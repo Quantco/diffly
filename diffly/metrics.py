@@ -12,12 +12,7 @@ import polars.selectors as cs
 
 @dataclass(frozen=True)
 class Metric:
-    """A metric function paired with a column-applicability selector.
-
-    Pass an instance as a value in the ``metrics`` mapping to compute a metric only for
-    the columns matched by ``selector``. A bare :data:`MetricFn` passed instead defaults
-    to numerical columns only.
-    """
+    """A metric function paired with a column-applicability selector."""
 
     fn: MetricFn
     selector: cs.Selector

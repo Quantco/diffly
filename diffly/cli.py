@@ -139,8 +139,7 @@ def main(
         list[str],
         typer.Option(
             help=(
-                "Metric presets to display per column. Repeatable. Most presets apply "
-                "to numerical columns only; ΔNull% applies to all columns. "
+                "Metric presets to display per column. Repeatable. "
                 f"Available: {', '.join(DEFAULT_METRICS)}."
             )
         ),
