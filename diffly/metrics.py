@@ -76,6 +76,25 @@ def _percentage_string(fraction: pl.Expr, *, signed: bool = False) -> pl.Expr:
     return body
 
 
+def _render_change(
+    old: pl.Expr,
+    new: pl.Expr,
+    format_value: Callable[[pl.Expr, bool], pl.Expr],
+) -> pl.Expr:
+    """Render a change as ``<old> -> <new> (<delta>)``.
+
+    ``format_value(value, signed)`` formats a value for display; ``old`` and ``new`` are
+    rendered unsigned and the delta ``new - old`` is rendered signed (with an explicit
+    ``+`` or ``-`` prefix).
+    """
+    return pl.format(
+        "{} -> {} ({})",
+        format_value(old, False),
+        format_value(new, False),
+        format_value(new - old, True),
+    )
+
+
 def null_fraction_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     """Change in the fraction of null entries, rendered as ``<old> -> <new> (<delta>)``.
 
@@ -84,13 +103,10 @@ def null_fraction_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     more nulls, ``-`` when it has fewer). Unlike the other presets, this applies to
     columns of any type.
     """
-    old = left.is_null().mean()
-    new = right.is_null().mean()
-    return pl.format(
-        "{} -> {} ({})",
-        _percentage_string(old),
-        _percentage_string(new),
-        _percentage_string(new - old, signed=True),
+    return _render_change(
+        left.is_null().mean(),
+        right.is_null().mean(),
+        lambda value, signed: _percentage_string(value, signed=signed),
     )
 
 
