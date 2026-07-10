@@ -41,15 +41,28 @@ def _percentage_string(
     pct = (fraction * 100).round(2)
     body = pl.format("{}%", pct) if percent_sign else pl.format("{}", pct)
     if signed:
-        return pl.when(pct >= 0).then(pl.format("+{}", body)).otherwise(body)
+        return (
+            pl.when(pct > 0)
+            .then(pl.format("+{}", body))
+            .when(pct < 0)
+            .then(body)
+            .otherwise(pl.format("±{}", body))
+        )
     return body
 
 
 def _number_string(value: pl.Expr, *, signed: bool = False) -> pl.Expr:
     """Format a numeric value to four significant figures, optionally with a sign."""
-    body = value.round_sig_figs(4).cast(pl.String)
+    rounded = value.round_sig_figs(4)
+    body = rounded.cast(pl.String)
     if signed:
-        return pl.when(value >= 0).then(pl.format("+{}", body)).otherwise(body)
+        return (
+            pl.when(rounded > 0)
+            .then(pl.format("+{}", body))
+            .when(rounded < 0)
+            .then(body)
+            .otherwise(pl.format("±{}", body))
+        )
     return body
 
 

@@ -229,7 +229,7 @@ def test_summary_data_parametrized(
         ),
         # Joined rows (id=1,2,3): left value = [10, 20, 30], right value = [10, 25, 30].
         "metrics": (
-            {"Mean": "20.0 -> 21.67 (+1.667)", "Max": "30.0 -> 30.0 (+0.0)"}
+            {"Mean": "20.0 -> 21.67 (+1.667)", "Max": "30.0 -> 30.0 (±0.0)"}
             if with_metrics
             else None
         ),

@@ -33,7 +33,7 @@ def test_median(frame: pl.DataFrame) -> None:
 
 def test_min(frame: pl.DataFrame) -> None:
     # min(left) = 1; min(right) = 1; delta = 0
-    assert _apply(metrics.min, frame) == "1 -> 1 (+0)"
+    assert _apply(metrics.min, frame) == "1 -> 1 (±0)"
 
 
 def test_max(frame: pl.DataFrame) -> None:
