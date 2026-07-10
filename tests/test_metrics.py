@@ -42,7 +42,7 @@ def test_max(frame: pl.DataFrame) -> None:
 
 
 def test_std(frame: pl.DataFrame) -> None:
-    # std(left) over [1, 2, 3] = 1.0; std(right) over [1, 2, 5, 4] ≈ 1.826; delta ≈ +0.826
+    # std(left) over [1, 2, 3] = 1.0; std(right) over [1, 2, 5, 4] ≈ 1.826; delta ≈ +0.8257
     assert _apply(metrics.std, frame) == "1.0 -> 1.826 (+0.8257)"
 
 
