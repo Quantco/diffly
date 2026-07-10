@@ -34,36 +34,38 @@ def _make_numeric_metric(fn: MetricFn) -> Metric:
 # ------------------------------------ FORMATTING ------------------------------------ #
 
 
+def _signed(value: pl.Expr, body: pl.Expr) -> pl.Expr:
+    """Prefix ``body`` with a sign based on ``value``: ``+`` if positive, ``-`` (already
+    part of ``body``) if negative, ``±`` if zero."""
+    return (
+        pl.when(value > 0)
+        .then(pl.format("+{}", body))
+        .when(value < 0)
+        .then(body)
+        .otherwise(pl.format("±{}", body))
+    )
+
+
+def _number_string(
+    value: pl.Expr,
+    *,
+    signed: bool = False,
+    round: Callable[[pl.Expr], pl.Expr] = lambda value: value.round_sig_figs(4),
+) -> pl.Expr:
+    """Format a numeric value with the given rounding, optionally with a sign."""
+    rounded = round(value)
+    body = rounded.cast(pl.String)
+    return _signed(rounded, body) if signed else body
+
+
 def _percentage_string(
     fraction: pl.Expr, *, signed: bool = False, percent_sign: bool = True
 ) -> pl.Expr:
     """Format a fraction as a percentage string, optionally with an explicit sign."""
-    pct = (fraction * 100).round(2)
-    body = pl.format("{}%", pct) if percent_sign else pl.format("{}", pct)
-    if signed:
-        return (
-            pl.when(pct > 0)
-            .then(pl.format("+{}", body))
-            .when(pct < 0)
-            .then(body)
-            .otherwise(pl.format("±{}", body))
-        )
-    return body
-
-
-def _number_string(value: pl.Expr, *, signed: bool = False) -> pl.Expr:
-    """Format a numeric value to four significant figures, optionally with a sign."""
-    rounded = value.round_sig_figs(4)
-    body = rounded.cast(pl.String)
-    if signed:
-        return (
-            pl.when(rounded > 0)
-            .then(pl.format("+{}", body))
-            .when(rounded < 0)
-            .then(body)
-            .otherwise(pl.format("±{}", body))
-        )
-    return body
+    body = _number_string(
+        fraction * 100, signed=signed, round=lambda value: value.round(2)
+    )
+    return pl.format("{}%", body) if percent_sign else body
 
 
 def _render_change(
