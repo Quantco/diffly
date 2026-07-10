@@ -130,5 +130,5 @@ DEFAULT_METRICS: dict[str, MetricFn | Metric] = {
     "Std": std,
     "Mean absolute deviation": mean_absolute_deviation,
     "Mean relative deviation": mean_relative_deviation,
-    "ΔNull%": Metric(fn=null_fraction_change, selector=cs.all()),
+    "Null%": Metric(fn=null_fraction_change, selector=cs.all()),
 }

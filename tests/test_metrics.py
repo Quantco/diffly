@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import math
+from typing import Any
 
 import polars as pl
 import pytest
@@ -16,7 +17,7 @@ def frame() -> pl.DataFrame:
     return pl.DataFrame({"l": [1, 2, 3, None], "r": [1, 2, 5, 4]})
 
 
-def _apply(metric: MetricFn, frame: pl.DataFrame) -> float:
+def _apply(metric: MetricFn, frame: pl.DataFrame) -> Any:
     return frame.select(metric(pl.col("l"), pl.col("r"))).item()
 
 
