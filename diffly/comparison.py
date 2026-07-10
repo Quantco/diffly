@@ -959,8 +959,9 @@ class DataFrameComparison:
                 one in a :class:`~diffly.metrics.Metric` with a column selector to target
                 other column types (e.g. ``Metric(fn, selector=cs.all())``).
                 See :doc:`/api/metrics` for the full list of presets and the
-                are computed; presets are not applied automatically. Prefer short labels
-                — the summary has a fixed width and many or long labels degrade rendering.
+                :data:`~diffly.metrics.MetricFn` type. When ``None`` (default), no metrics
+                are computed; presets are not applied automatically. Prefer short labels —
+                the summary has a fixed width and many or long labels degrade rendering.
 
         Returns:
             A summary which can be printed or written to a file.
