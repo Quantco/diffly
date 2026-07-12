@@ -10,9 +10,10 @@ Metrics are scalar aggregations computed per column when generating a
 callable. :mod:`diffly.metrics` ships a set of presets; you can also supply
 your own callable ``(left_expr, right_expr) -> pl.Expr``.
 
-A bare callable is only computed for numerical columns. To target other column
-types, wrap it in a :class:`Metric` with a column selector, e.g.
-``Metric(fn, selector=cs.string())`` or ``selector=cs.all()``.
+A bare callable is only computed for numerical columns. To target a different
+set of columns, wrap it in a :class:`Metric` with a column selector, e.g.
+``Metric(fn, selector=cs.all())``, ``Metric(fn, selector=cs.boolean())``, or
+``Metric(fn, selector=cs.by_name("my_column_name"))``.
 
 .. autodata:: MetricFn
    :no-value:
