@@ -27,10 +27,6 @@ all joined rows.
 """
 
 
-def _make_numeric_metric(fn: MetricFn) -> Metric:
-    return Metric(fn=fn, selector=cs.numeric())
-
-
 def mean(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     """Mean of ``right - left``."""
     return (right - left).mean()
@@ -67,43 +63,13 @@ def mean_relative_deviation(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     return ((right - left) / left).abs().mean()
 
 
-def _percentage_string(
-    fraction: pl.Expr, *, signed: bool = False, percent_sign: bool = True
-) -> pl.Expr:
-    """Format a fraction as a percentage string, optionally with an explicit sign."""
-    pct = (fraction * 100).round(2)
-    body = pl.format("{}%", pct) if percent_sign else pl.format("{}", pct)
-    if signed:
-        return pl.when(pct >= 0).then(pl.format("+{}", body)).otherwise(body)
-    return body
-
-
-def _render_change(
-    old: pl.Expr,
-    new: pl.Expr,
-    format_value: Callable[[pl.Expr, bool], pl.Expr],
-) -> pl.Expr:
-    """Render a change as ``<old> -> <new> (<delta>)``.
-
-    ``format_value(value, signed)`` formats a value for display; ``old`` and ``new`` are
-    rendered unsigned and the delta ``new - old`` is rendered signed (with an explicit
-    ``+`` or ``-`` prefix).
-    """
-    return pl.format(
-        "{} -> {} ({})",
-        format_value(old, False),
-        format_value(new, False),
-        format_value(new - old, True),
-    )
-
-
 def null_fraction_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     """Change in the fraction of null entries, rendered as ``<old> -> <new> (<delta>)``.
 
     ``old`` and ``new`` are the null percentages of the left and right side, and
     ``delta`` is their signed difference (``+`` when the right side has proportionally
-    more nulls, ``-`` when it has fewer). Unlike the other presets, this applies to
-    columns of any type.
+    more nulls, ``-`` when it has fewer). This metric function can be applied to columns
+    of any type.
     """
     return _render_change(
         left.is_null().mean(),
@@ -136,3 +102,42 @@ DEFAULT_METRICS: dict[str, MetricFn | Metric] = {
     "Mean relative deviation": mean_relative_deviation,
     "Null%": Metric(fn=null_fraction_change, selector=cs.all()),
 }
+
+
+# ------------------------------------------------------------------------------------ #
+#                                    UTILITY METHODS                                   #
+# ------------------------------------------------------------------------------------ #
+
+
+def _make_numeric_metric(fn: MetricFn) -> Metric:
+    return Metric(fn=fn, selector=cs.numeric())
+
+
+def _percentage_string(
+    fraction: pl.Expr, *, signed: bool = False, percent_sign: bool = True
+) -> pl.Expr:
+    """Format a fraction as a percentage string, optionally with an explicit sign."""
+    pct = (fraction * 100).round(2)
+    body = pl.format("{}%", pct) if percent_sign else pl.format("{}", pct)
+    if signed:
+        return pl.when(pct >= 0).then(pl.format("+{}", body)).otherwise(body)
+    return body
+
+
+def _render_change(
+    old: pl.Expr,
+    new: pl.Expr,
+    format_value: Callable[[pl.Expr, bool], pl.Expr],
+) -> pl.Expr:
+    """Render a change as ``<old> -> <new> (<delta>)``.
+
+    ``format_value(value, signed)`` formats a value for display; ``old`` and ``new`` are
+    rendered unsigned and the delta ``new - old`` is rendered signed (with an explicit
+    ``+`` prefix for positive values).
+    """
+    return pl.format(
+        "{} -> {} ({})",
+        format_value(old, False),
+        format_value(new, False),
+        format_value(new - old, True),
+    )
