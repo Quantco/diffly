@@ -6,7 +6,7 @@ import polars.selectors as cs
 import pytest
 
 from diffly import compare_frames, metrics
-from diffly.metrics import Metric
+from diffly.metrics import DEFAULT_METRICS, Metric
 from tests.utils import generate_summaries
 
 
@@ -32,7 +32,7 @@ def test_generate() -> None:
         metrics={
             # Numeric-only preset alongside a metric applied to all columns.
             "Mean": metrics.mean,
-            "Null%": metrics.null_fraction_change,
+            "Null%": DEFAULT_METRICS["Null%"],
             # A user-supplied metric with a custom (string-only) selector.
             "str_len_delta": Metric(
                 fn=lambda left, right: (
