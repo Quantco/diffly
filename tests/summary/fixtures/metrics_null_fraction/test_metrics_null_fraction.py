@@ -32,7 +32,7 @@ def test_generate() -> None:
         metrics={
             # Numeric-only preset alongside a metric applied to all columns.
             "Mean": metrics.mean,
-            "Null%": metrics.DEFAULT_METRICS["Null%"],
+            "Null%": metrics.null_fraction_change,
             # A user-supplied metric with a custom (string-only) selector.
             "str_len_delta": Metric(
                 fn=lambda left, right: (
