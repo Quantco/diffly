@@ -15,16 +15,30 @@ set of columns, wrap it in a :class:`Metric` with a column selector, e.g.
 ``Metric(fn, selector=cs.all())``, ``Metric(fn, selector=cs.boolean())``, or
 ``Metric(fn, selector=cs.by_name("my_column_name"))``.
 
+Presets come in two families, each with its own module and default set:
+
+- :mod:`diffly.metrics.change` describes the *change* between numeric columns by
+  aggregating over ``right - left``.
+- :mod:`diffly.metrics.data` describes the left and right datasets *individually*,
+  so you can see how a change affects the data.
+
+The two default sets are combined into :data:`DEFAULT_METRICS`.
+
 .. autodata:: MetricFn
    :no-value:
 
 .. autoclass:: Metric
 
+.. autodata:: DEFAULT_METRICS
+   :no-value:
+
 Change metrics
 ==============
 
+.. currentmodule:: diffly.metrics.change
+
 Metrics that describe the change between numeric columns by aggregating over
-``right - left``. They live in :mod:`diffly.metrics.change`.
+``right - left``.
 
 .. autosummary::
    :toctree: _gen/
@@ -38,14 +52,21 @@ Metrics that describe the change between numeric columns by aggregating over
    mean_relative_deviation
    quantile
 
+.. autodata:: DEFAULT_CHANGE_METRICS
+   :no-value:
+
 Data metrics
 ============
 
+.. currentmodule:: diffly.metrics.data
+
 Metrics that describe the left and right datasets individually, so you can
-understand how a change affects the data. They live in
-:mod:`diffly.metrics.data`.
+understand how a change affects the data.
 
 .. autosummary::
    :toctree: _gen/
 
    null_fraction_change
+
+.. autodata:: DEFAULT_DATA_METRICS
+   :no-value:
