@@ -5,10 +5,10 @@
 
 Two families are provided:
 
-- :mod:`~diffly.metrics.change` describes the change between numeric columns by
-  aggregating over ``right - left``.
-- :mod:`~diffly.metrics.data` describes the left and right datasets individually,
-  so you can understand how a change affects the data.
+- Metrics in :mod:`~diffly.metrics.change` describe the change between numeric
+  columns itself by aggregating over ``right - left``.
+- Metrics in :mod:`~diffly.metrics.data` describe the left and right datasets
+  individually, explaining how a change affects the data.
 """
 
 from __future__ import annotations
@@ -26,11 +26,10 @@ from .change import (
     quantile,
     std,
 )
-from .data import null_fraction_change
 
 DEFAULT_METRICS: dict[str, MetricFn | Metric] = {
-    **change.DEFAULT_METRICS,
-    **data.DEFAULT_METRICS,
+    **change.DEFAULT_CHANGE_METRICS,
+    **data.DEFAULT_DATA_METRICS,
 }
 
 __all__ = [
@@ -45,7 +44,6 @@ __all__ = [
     "mean_relative_deviation",
     "median",
     "min",
-    "null_fraction_change",
     "quantile",
     "std",
     "_make_numeric_metric",
