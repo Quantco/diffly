@@ -1,66 +1,20 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
+"""Metrics describing the left and right datasets individually.
+
+These characterize each side of a change so you can understand how the change affects
+the data, rather than describing the change itself.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
 
 import polars as pl
 import polars.selectors as cs
 
-
-@dataclass(frozen=True)
-class Metric:
-    """A metric function paired with a column-applicability selector."""
-
-    fn: MetricFn
-    selector: cs.Selector
-
-
-MetricFn = Callable[[pl.Expr, pl.Expr], pl.Expr]
-"""A metric function maps ``(left_expr, right_expr)`` to a scalar aggregation
-expression.
-
-The expressions refer to the left-side and right-side values of a single column across
-all joined rows.
-"""
-
-
-def mean(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Mean of ``right - left``."""
-    return (right - left).mean()
-
-
-def median(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Median of ``right - left``."""
-    return (right - left).median()
-
-
-def min(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Minimum of ``right - left``."""
-    return (right - left).min()
-
-
-def max(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Maximum of ``right - left``."""
-    return (right - left).max()
-
-
-def std(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Standard deviation of ``right - left``."""
-    return (right - left).std()
-
-
-def mean_absolute_deviation(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Mean of ``|right - left|``."""
-    return (right - left).abs().mean()
-
-
-def mean_relative_deviation(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Mean of ``|(right - left) / left|``. Yields ``inf`` or ``null`` where
-    ``left`` is zero."""
-    return ((right - left) / left).abs().mean()
+from ._common import Metric, MetricFn
 
 
 def null_fraction_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
@@ -80,26 +34,7 @@ def null_fraction_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     )
 
 
-def quantile(q: float) -> MetricFn:
-    """Factory returning a metric that computes the ``q``-quantile of
-    ``right - left``."""
-    if not 0 <= q <= 1:
-        raise ValueError(f"q must be in [0, 1], got {q}")
-
-    def _quantile(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-        return (right - left).quantile(q)
-
-    return _quantile
-
-
 DEFAULT_METRICS: dict[str, MetricFn | Metric] = {
-    "Mean": mean,
-    "Median": median,
-    "Min": min,
-    "Max": max,
-    "Std": std,
-    "Mean absolute deviation": mean_absolute_deviation,
-    "Mean relative deviation": mean_relative_deviation,
     "Null%": Metric(fn=null_fraction_change, selector=cs.all()),
 }
 
@@ -107,10 +42,6 @@ DEFAULT_METRICS: dict[str, MetricFn | Metric] = {
 # ------------------------------------------------------------------------------------ #
 #                                    UTILITY METHODS                                   #
 # ------------------------------------------------------------------------------------ #
-
-
-def _make_numeric_metric(fn: MetricFn) -> Metric:
-    return Metric(fn=fn, selector=cs.numeric())
 
 
 def _percentage_string(

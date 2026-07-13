@@ -20,8 +20,11 @@ set of columns, wrap it in a :class:`Metric` with a column selector, e.g.
 
 .. autoclass:: Metric
 
-Presets
-=======
+Change metrics
+==============
+
+Metrics that describe the change between numeric columns by aggregating over
+``right - left``. They live in :mod:`diffly.metrics.change`.
 
 .. autosummary::
    :toctree: _gen/
@@ -33,5 +36,16 @@ Presets
    std
    mean_absolute_deviation
    mean_relative_deviation
-   null_fraction_change
    quantile
+
+Data metrics
+============
+
+Metrics that describe the left and right datasets individually, so you can
+understand how a change affects the data. They live in
+:mod:`diffly.metrics.data`.
+
+.. autosummary::
+   :toctree: _gen/
+
+   null_fraction_change

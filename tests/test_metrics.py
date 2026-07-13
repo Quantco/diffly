@@ -92,3 +92,18 @@ def test_quantile(frame: pl.DataFrame) -> None:
 def test_quantile_out_of_range() -> None:
     with pytest.raises(ValueError, match="q must be in"):
         metrics.quantile(1.5)
+
+
+def test_default_metrics_partition() -> None:
+    from diffly.metrics import change, data
+
+    # The two families partition the top-level defaults, with change first.
+    assert metrics.DEFAULT_METRICS == {
+        **change.DEFAULT_METRICS,
+        **data.DEFAULT_METRICS,
+    }
+    assert set(change.DEFAULT_METRICS) & set(data.DEFAULT_METRICS) == set()
+    assert list(metrics.DEFAULT_METRICS) == [
+        *change.DEFAULT_METRICS,
+        *data.DEFAULT_METRICS,
+    ]
