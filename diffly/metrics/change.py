@@ -75,3 +75,4 @@ DEFAULT_CHANGE_METRICS: dict[str, MetricFn] = {
     "Mean absolute deviation": mean_absolute_deviation,
     "Mean relative deviation": mean_relative_deviation,
 }
+"""Preset metrics describing the change between numeric columns."""

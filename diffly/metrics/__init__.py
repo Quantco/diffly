@@ -31,6 +31,7 @@ DEFAULT_METRICS: dict[str, MetricFn | Metric] = {
     **change.DEFAULT_CHANGE_METRICS,
     **data.DEFAULT_DATA_METRICS,
 }
+"""All preset metrics, combining the change and data default sets."""
 
 __all__ = [
     "DEFAULT_METRICS",

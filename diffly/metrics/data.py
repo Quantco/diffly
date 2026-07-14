@@ -37,6 +37,7 @@ def null_fraction_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
 DEFAULT_DATA_METRICS: dict[str, MetricFn | Metric] = {
     "Null%": Metric(fn=null_fraction_change, selector=cs.all()),
 }
+"""Preset metrics describing the left and right datasets individually."""
 
 
 # ------------------------------------------------------------------------------------ #
