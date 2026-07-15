@@ -29,9 +29,8 @@ from .change import (
 
 DEFAULT_METRICS: dict[str, MetricFn | Metric] = {
     **change.DEFAULT_CHANGE_METRICS,
-    **data.DEFAULT_DATA_METRICS,
 }
-"""All preset metrics, combining the change and data default sets."""
+"""The default preset metrics, consisting of the change default set."""
 
 __all__ = [
     "DEFAULT_METRICS",

@@ -22,7 +22,7 @@ Presets come in two families, each with its own module and default set:
 - :mod:`diffly.metrics.data` describes the left and right datasets *individually*,
   so you can see how a change affects the data.
 
-The two default sets are combined into :data:`DEFAULT_METRICS`.
+The change default set is exposed as :data:`DEFAULT_METRICS`.
 
 .. autodata:: MetricFn
    :no-value:

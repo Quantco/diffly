@@ -97,13 +97,7 @@ def test_quantile_out_of_range() -> None:
 def test_default_metrics_partition() -> None:
     from diffly.metrics import change
 
-    # The two families partition the top-level defaults, with change first.
-    assert metrics.DEFAULT_METRICS == {
-        **change.DEFAULT_CHANGE_METRICS,
-        **data.DEFAULT_DATA_METRICS,
-    }
+    # The top-level defaults consist of the change metrics only.
+    assert metrics.DEFAULT_METRICS == {**change.DEFAULT_CHANGE_METRICS}
     assert set(change.DEFAULT_CHANGE_METRICS) & set(data.DEFAULT_DATA_METRICS) == set()
-    assert list(metrics.DEFAULT_METRICS) == [
-        *change.DEFAULT_CHANGE_METRICS,
-        *data.DEFAULT_DATA_METRICS,
-    ]
+    assert list(metrics.DEFAULT_METRICS) == [*change.DEFAULT_CHANGE_METRICS]
