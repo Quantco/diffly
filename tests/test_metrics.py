@@ -83,6 +83,36 @@ def test_null_fraction_change_non_numeric() -> None:
     assert _apply(data.null_fraction_change, frame) == "0.0% -> 50.0% (+50.0)"
 
 
+def test_mean_change() -> None:
+    # left mean: 2.0; right mean: 4.0; delta = +2.0
+    frame = pl.DataFrame({"l": [1, 2, 3], "r": [3, 4, 5]})
+    assert _apply(data.mean_change, frame) == "2.0 -> 4.0 (+2.0)"
+
+
+def test_median_change() -> None:
+    # left median: 2.0; right median: 4.0; delta = +2.0
+    frame = pl.DataFrame({"l": [1, 2, 3], "r": [3, 4, 5]})
+    assert _apply(data.median_change, frame) == "2.0 -> 4.0 (+2.0)"
+
+
+def test_min_change() -> None:
+    # left min: 1; right min: 3; delta = +2
+    frame = pl.DataFrame({"l": [1, 2, 3], "r": [3, 4, 5]})
+    assert _apply(data.min_change, frame) == "1 -> 3 (+2)"
+
+
+def test_max_change() -> None:
+    # left max: 5; right max: 3; delta = -2
+    frame = pl.DataFrame({"l": [1, 2, 5], "r": [1, 2, 3]})
+    assert _apply(data.max_change, frame) == "5 -> 3 (-2)"
+
+
+def test_std_change() -> None:
+    # both sides equal spread; delta = 0.0
+    frame = pl.DataFrame({"l": [1.0, 2.0, 3.0], "r": [4.0, 5.0, 6.0]})
+    assert _apply(data.std_change, frame) == "1.0 -> 1.0 (+0.0)"
+
+
 def test_quantile(frame: pl.DataFrame) -> None:
     # deltas [0, 0, 2]: p50 = 0, p100 = 2
     assert _apply(metrics.quantile(0.5), frame) == 0

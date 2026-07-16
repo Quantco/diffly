@@ -34,8 +34,39 @@ def null_fraction_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     )
 
 
+def mean_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Change in the mean, rendered as ``<old mean> -> <new mean> (<delta>)``."""
+    return _render_numeric_change(left.mean(), right.mean())
+
+
+def median_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Change in the median, rendered as ``<old median> -> <new median> (<delta>)``."""
+    return _render_numeric_change(left.median(), right.median())
+
+
+def min_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Change in the minimum, rendered as ``<old min> -> <new min> (<delta>)``."""
+    return _render_numeric_change(left.min(), right.min())
+
+
+def max_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Change in the maximum, rendered as ``<old max> -> <new max> (<delta>)``."""
+    return _render_numeric_change(left.max(), right.max())
+
+
+def std_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Change in the standard deviation, rendered as ``<old std> -> <new std>
+    (<delta>)``."""
+    return _render_numeric_change(left.std(), right.std())
+
+
 DEFAULT_DATA_METRICS: dict[str, MetricFn | Metric] = {
-    "Null%": Metric(fn=null_fraction_change, selector=cs.all()),
+    "Null% (data)": Metric(fn=null_fraction_change, selector=cs.all()),
+    "Mean (data)": Metric(fn=mean_change, selector=cs.numeric()),
+    "Median (data)": Metric(fn=median_change, selector=cs.numeric()),
+    "Min (data)": Metric(fn=min_change, selector=cs.numeric()),
+    "Max (data)": Metric(fn=max_change, selector=cs.numeric()),
+    "Std (data)": Metric(fn=std_change, selector=cs.numeric()),
 }
 """Preset metrics describing the left and right datasets individually."""
 
@@ -54,6 +85,21 @@ def _percentage_string(
     if signed:
         return pl.when(pct >= 0).then(pl.format("+{}", body)).otherwise(body)
     return body
+
+
+def _numeric_string(value: pl.Expr, signed: bool) -> pl.Expr:
+    """Format a numeric value for display, optionally with an explicit sign."""
+    rounded = value.round_sig_figs(4)
+    body = pl.format("{}", rounded)
+    if signed:
+        return pl.when(rounded >= 0).then(pl.format("+{}", body)).otherwise(body)
+    return body
+
+
+def _render_numeric_change(old: pl.Expr, new: pl.Expr) -> pl.Expr:
+    """Render a change between two numeric aggregations as ``<old> -> <new>
+    (<delta>)``."""
+    return _render_change(old, new, _numeric_string)
 
 
 def _render_change(
