@@ -17,7 +17,7 @@ import polars.selectors as cs
 from ._common import Metric, MetricFn
 
 
-def null_fraction_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+def null_fraction_data(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     """Change in the fraction of null entries, rendered as ``<old> -> <new> (<delta>)``.
 
     ``old`` and ``new`` are the null percentages of the left and right side, and
@@ -34,39 +34,39 @@ def null_fraction_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     )
 
 
-def mean_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+def mean_data(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     """Change in the mean, rendered as ``<old mean> -> <new mean> (<delta>)``."""
     return _render_numeric_change(left.mean(), right.mean())
 
 
-def median_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+def median_data(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     """Change in the median, rendered as ``<old median> -> <new median> (<delta>)``."""
     return _render_numeric_change(left.median(), right.median())
 
 
-def min_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+def min_data(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     """Change in the minimum, rendered as ``<old min> -> <new min> (<delta>)``."""
     return _render_numeric_change(left.min(), right.min())
 
 
-def max_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+def max_data(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     """Change in the maximum, rendered as ``<old max> -> <new max> (<delta>)``."""
     return _render_numeric_change(left.max(), right.max())
 
 
-def std_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+def std_data(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     """Change in the standard deviation, rendered as ``<old std> -> <new std>
     (<delta>)``."""
     return _render_numeric_change(left.std(), right.std())
 
 
 DEFAULT_DATA_METRICS: dict[str, MetricFn | Metric] = {
-    "Null% (data)": Metric(fn=null_fraction_change, selector=cs.all()),
-    "Mean (data)": Metric(fn=mean_change, selector=cs.numeric()),
-    "Median (data)": Metric(fn=median_change, selector=cs.numeric()),
-    "Min (data)": Metric(fn=min_change, selector=cs.numeric()),
-    "Max (data)": Metric(fn=max_change, selector=cs.numeric()),
-    "Std (data)": Metric(fn=std_change, selector=cs.numeric()),
+    "Null% (data)": Metric(fn=null_fraction_data, selector=cs.all()),
+    "Mean (data)": Metric(fn=mean_data, selector=cs.numeric()),
+    "Median (data)": Metric(fn=median_data, selector=cs.numeric()),
+    "Min (data)": Metric(fn=min_data, selector=cs.numeric()),
+    "Max (data)": Metric(fn=max_data, selector=cs.numeric()),
+    "Std (data)": Metric(fn=std_data, selector=cs.numeric()),
 }
 """Preset metrics describing the left and right datasets individually."""
 

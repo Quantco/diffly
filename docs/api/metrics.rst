@@ -66,12 +66,12 @@ understand how a change affects the data.
 .. autosummary::
    :toctree: _gen/
 
-   null_fraction_change
-   mean_change
-   median_change
-   min_change
-   max_change
-   std_change
+   null_fraction_data
+   mean_data
+   median_data
+   min_data
+   max_data
+   std_data
 
 .. autodata:: DEFAULT_DATA_METRICS
    :no-value:
