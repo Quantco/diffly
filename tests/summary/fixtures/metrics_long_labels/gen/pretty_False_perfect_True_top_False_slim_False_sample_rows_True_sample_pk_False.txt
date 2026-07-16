@@ -22,8 +22,10 @@
  ▔▔▔▔▔▔▔
    ┏━━━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━┓
    ┃        ┃        ┃        ┃        ┃         ┃        ┃         ┃   Mean ┃    Mean ┃
-   ┃        ┃  Match ┃   Mean ┃ Median ┃ Minimum ┃ Maxim… ┃ Standa… ┃ Absol… ┃ Relati… ┃
-   ┃ Column ┃   Rate ┃  Delta ┃  Delta ┃   Delta ┃  Delta ┃ Deviat… ┃ Devia… ┃ Deviat… ┃
+   ┃        ┃        ┃        ┃        ┃         ┃        ┃ Standar ┃ Absolu ┃ Relativ ┃
+   ┃        ┃        ┃        ┃        ┃         ┃ Maximu ┃       d ┃     te ┃       e ┃
+   ┃        ┃  Match ┃   Mean ┃ Median ┃ Minimum ┃      m ┃ Deviati ┃ Deviat ┃ Deviati ┃
+   ┃ Column ┃   Rate ┃  Delta ┃  Delta ┃   Delta ┃  Delta ┃      on ┃    ion ┃      on ┃
    ┡━━━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━┩
    │ price  │ 60.00% │    0.6 │      0 │       0 │      2 │  0.8944 │    0.6 │    0.02 │
    │ qty    │ 80.00% │    0.2 │      0 │       0 │      1 │  0.4472 │    0.2 │    0.05 │

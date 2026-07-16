@@ -10,8 +10,10 @@
  ▔▔▔▔▔▔▔
    ┏━━━━━━━━┳━━━━━━━━┳━━━━━━┳━━━━━━━━┳━━━━━┳━━━━━┳━━━━━━━━┳━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━┓
    ┃        ┃        ┃      ┃        ┃     ┃     ┃        ┃    Mean ┃   Mean ┃         ┃
-   ┃        ┃  Match ┃      ┃        ┃     ┃     ┃        ┃ absolu… ┃ relat… ┃     Top ┃
-   ┃ Column ┃   Rate ┃ Mean ┃ Median ┃ Min ┃ Max ┃    Std ┃ deviat… ┃ devia… ┃ Changes ┃
+   ┃        ┃        ┃      ┃        ┃     ┃     ┃        ┃ absolut ┃ relati ┃         ┃
+   ┃        ┃        ┃      ┃        ┃     ┃     ┃        ┃       e ┃     ve ┃         ┃
+   ┃        ┃  Match ┃      ┃        ┃     ┃     ┃        ┃ deviati ┃ deviat ┃     Top ┃
+   ┃ Column ┃   Rate ┃ Mean ┃ Median ┃ Min ┃ Max ┃    Std ┃      on ┃    ion ┃ Changes ┃
    ┡━━━━━━━━╇━━━━━━━━╇━━━━━━╇━━━━━━━━╇━━━━━╇━━━━━╇━━━━━━━━╇━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━┩
    │ price  │ 60.00% │  0.6 │      0 │   0 │   2 │ 0.8944 │     0.6 │   0.02 │ 40.0 -> │
    │        │        │      │        │     │     │        │         │        │    42.0 │

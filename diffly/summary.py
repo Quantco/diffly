@@ -580,7 +580,7 @@ class Summary:
             )
             matches.add_column("Match Rate", justify="right")
             for label in metric_labels:
-                matches.add_column(label, justify="right")
+                matches.add_column(label, justify="right", overflow=OVERFLOW)
             has_top_changes_column = any(
                 c.changes is not None for c in columns if c.match_rate < 1
             )
