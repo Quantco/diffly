@@ -1131,10 +1131,13 @@ def _format_value(value: Any, *, float_format: str | None = None) -> str:
 def _format_metric_value(value: Any) -> str:
     """Format a metric value for the column summary.
 
-    Blanks out ``None`` and renders floats with ``.4g`` precision.
+    Blanks out ``None``, renders string values verbatim, and renders floats with ``.4g``
+    precision.
     """
     if value is None:
         return ""
+    if isinstance(value, str):
+        return _yellow(value)
     return _format_value(value, float_format=".4g")
 
 

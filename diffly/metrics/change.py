@@ -1,33 +1,17 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
-from __future__ import annotations
+"""Metrics describing the change between numeric columns.
 
-from collections.abc import Callable
-from dataclasses import dataclass
+These aggregate over ``right - left`` to characterize the change itself.
+"""
+
+from __future__ import annotations
 
 import polars as pl
 import polars.selectors as cs
 
-
-@dataclass(frozen=True)
-class Metric:
-    """A metric function paired with a column-applicability selector.
-
-    Internal only.
-    """
-
-    fn: MetricFn
-    selector: cs.Selector
-
-
-MetricFn = Callable[[pl.Expr, pl.Expr], pl.Expr]
-"""A metric function maps ``(left_expr, right_expr)`` to a scalar aggregation
-expression.
-
-The expressions refer to the left-side and right-side values of a single column across
-all joined rows.
-"""
+from ._common import Metric, MetricFn
 
 
 def _make_numeric_metric(fn: MetricFn) -> Metric:
@@ -82,7 +66,7 @@ def quantile(q: float) -> MetricFn:
     return _quantile
 
 
-DEFAULT_METRICS: dict[str, MetricFn] = {
+DEFAULT_CHANGE_METRICS: dict[str, MetricFn] = {
     "Mean": mean,
     "Median": median,
     "Min": min,
@@ -91,3 +75,4 @@ DEFAULT_METRICS: dict[str, MetricFn] = {
     "Mean absolute deviation": mean_absolute_deviation,
     "Mean relative deviation": mean_relative_deviation,
 }
+"""Preset metrics describing the change between numeric columns."""
