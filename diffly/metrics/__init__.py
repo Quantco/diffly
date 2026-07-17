@@ -26,6 +26,7 @@ from .change import (
     quantile,
     std,
 )
+from .data import _make_data_metric
 
 DEFAULT_METRICS: dict[str, MetricFn | Metric] = {
     **change.DEFAULT_CHANGE_METRICS,
@@ -47,4 +48,5 @@ __all__ = [
     "quantile",
     "std",
     "_make_numeric_metric",
+    "_make_data_metric",
 ]

@@ -17,6 +17,11 @@ import polars.selectors as cs
 from ._common import Metric, MetricFn
 
 
+def _make_data_metric(fn: MetricFn, selector: cs.Selector = cs.all()) -> Metric:
+    """Wrap a metric function as a data metric, applicable to all columns by default."""
+    return Metric(fn=fn, selector=selector, kind="data")
+
+
 def null_fraction_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     """Change in the fraction of null entries, rendered as ``<old> -> <new> (<delta>)``.
 
@@ -35,7 +40,7 @@ def null_fraction_change(left: pl.Expr, right: pl.Expr) -> pl.Expr:
 
 
 DEFAULT_DATA_METRICS: dict[str, MetricFn | Metric] = {
-    "Null%": Metric(fn=null_fraction_change, selector=cs.all(), kind="data"),
+    "Null%": _make_data_metric(null_fraction_change),
 }
 """Preset metrics describing the left and right datasets individually."""
 
