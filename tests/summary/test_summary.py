@@ -13,6 +13,7 @@ import pytest
 
 from diffly import compare_frames, metrics
 from diffly.comparison import DataFrameComparison
+from diffly.metrics.data import DEFAULT_DATA_METRICS
 from diffly.summary import _format_fraction_as_percentage, to_json_safe
 
 
@@ -132,8 +133,6 @@ def test_zero_top_k_column_changes_with_show_sample_primary_key() -> None:
 
 
 def test_change_and_data_metrics_routed_to_separate_fields() -> None:
-    from diffly.metrics.data import DEFAULT_DATA_METRICS
-
     # Joined rows id=1,2,3. value deltas (right - left) = [0, 5, null] → Mean = 2.5.
     # value nulls: left 0/3 = 0%, right 1/3 = 33.33% → Null% = "0.0% -> 33.33% (+33.33)".
     left = pl.DataFrame({"id": [1, 2, 3], "value": [10.0, 20.0, 30.0]})
