@@ -638,9 +638,7 @@ class Summary:
     # ------------------------------- DATA INSPECTION -------------------------------- #
 
     def _print_data_inspection(self, console: Console) -> None:
-        columns = self._data.columns
-        data_metric_labels = self._data._data_metric_labels
-        if not columns or not data_metric_labels:
+        if not self._data.columns or not self._data._data_metric_labels:
             return
         _print_section(
             console,
@@ -649,9 +647,7 @@ class Summary:
         )
 
     def _section_data_inspection(self) -> RenderableType:
-        columns = self._data.columns
-        assert columns is not None
-        data_metric_labels = self._data._data_metric_labels
+        assert self._data.columns is not None
 
         table = Table()
         table.add_column(
@@ -659,11 +655,11 @@ class Summary:
             max_width=COLUMN_SECTION_COLUMN_WIDTH,
             overflow=OVERFLOW,
         )
-        for label in data_metric_labels:
-            table.add_column(label, justify="right")
-        for col in columns:
+        for label in self._data._data_metric_labels:
+            table.add_column(label, justify="right", overflow=OVERFLOW)
+        for col in self._data.columns:
             row_items: list[RenderableType] = [Text(col.name, style="cyan")]
-            for label in data_metric_labels:
+            for label in self._data._data_metric_labels:
                 value = col.data_metrics.get(label) if col.data_metrics else None
                 row_items.append(_format_metric_value(value))
             table.add_row(*row_items)
