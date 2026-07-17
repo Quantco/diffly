@@ -229,6 +229,7 @@ def test_summary_data_parametrized(
         ),
         # Joined rows (id=1,2,3): value deltas = [0, 5, 0].
         "metrics": {"Mean": pytest.approx(5 / 3), "Max": 5.0} if with_metrics else None,
+        "data_metrics": None,
     }
     expected_columns = []
     if show_perfect_column_matches:
@@ -239,6 +240,7 @@ def test_summary_data_parametrized(
                 "n_total_changes": 0,
                 "changes": None,
                 "metrics": None,
+                "data_metrics": None,
             }
         )
     expected_columns.append(value_col)

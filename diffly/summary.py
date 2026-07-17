@@ -131,7 +131,9 @@ class Summary:
                       "name": "value",
                       "match_rate": 0.667,
                       "n_total_changes": 1,
-                      "changes": [{"old": 1.0, "new": 2.0, "count": 1, "sample_pk": [1]}]
+                      "changes": [{"old": 1.0, "new": 2.0, "count": 1, "sample_pk": [1]}],
+                      "metrics": null,
+                      "data_metrics": null
                     }
                   ],
                   "sample_rows_left_only": [],
@@ -179,6 +181,7 @@ class Summary:
         self._print_schemas(console)
         self._print_rows(console)
         self._print_columns(console)
+        self._print_data_inspection(console)
         self._print_sample_rows_only_one_side(console, side=Side.LEFT)
         self._print_sample_rows_only_one_side(console, side=Side.RIGHT)
 
@@ -571,7 +574,7 @@ class Summary:
         elif not columns:
             display_items.append(Text("All columns match perfectly.", style="italic"))
         else:
-            metric_labels = self._data._metric_labels
+            metric_labels = self._data._change_metric_labels
             matches = Table(show_header=bool(metric_labels))
             matches.add_column(
                 "Column",
@@ -631,6 +634,40 @@ class Summary:
             display_items.append(matches)
 
         return Group(*display_items)
+
+    # ------------------------------- DATA INSPECTION -------------------------------- #
+
+    def _print_data_inspection(self, console: Console) -> None:
+        columns = self._data.columns
+        data_metric_labels = self._data._data_metric_labels
+        if not columns or not data_metric_labels:
+            return
+        _print_section(
+            console,
+            "Data Inspection",
+            self._section_data_inspection(),
+        )
+
+    def _section_data_inspection(self) -> RenderableType:
+        columns = self._data.columns
+        assert columns is not None
+        data_metric_labels = self._data._data_metric_labels
+
+        table = Table()
+        table.add_column(
+            "Column",
+            max_width=COLUMN_SECTION_COLUMN_WIDTH,
+            overflow=OVERFLOW,
+        )
+        for label in data_metric_labels:
+            table.add_column(label, justify="right")
+        for col in columns:
+            row_items: list[RenderableType] = [Text(col.name, style="cyan")]
+            for label in data_metric_labels:
+                value = col.data_metrics.get(label) if col.data_metrics else None
+                row_items.append(_format_metric_value(value))
+            table.add_row(*row_items)
+        return table
 
     # ------------------------------ ROWS ONLY ONE SIDE ------------------------------ #
 
@@ -716,6 +753,7 @@ class SummaryDataColumn:
     n_total_changes: int
     changes: list[SummaryDataColumnChange] | None
     metrics: dict[str, Any] | None
+    data_metrics: dict[str, Any] | None
 
 
 @dataclass
@@ -733,7 +771,8 @@ class SummaryData:
     _other_common_columns: list[str]
     _truncated_left_name: str
     _truncated_right_name: str
-    _metric_labels: list[str]
+    _change_metric_labels: list[str]
+    _data_metric_labels: list[str]
 
     def to_dict(self) -> dict[str, Any]:
         def _convert(obj: Any) -> Any:
@@ -836,12 +875,18 @@ def _compute_summary_data(
             _other_common_columns=comp._other_common_columns,
             _truncated_left_name=truncated_left,
             _truncated_right_name=truncated_right,
-            _metric_labels=[],
+            _change_metric_labels=[],
+            _data_metric_labels=[],
         )
 
     metrics_resolved: dict[str, Metric] = dict(metrics or {})
     metrics_by_column = _compute_column_metrics(comp, metrics_resolved)
-    metric_labels = list(metrics_resolved.keys())
+    change_metric_labels = [
+        label for label, m in metrics_resolved.items() if m.kind == "change"
+    ]
+    data_metric_labels = [
+        label for label, m in metrics_resolved.items() if m.kind == "data"
+    ]
 
     schemas = _compute_schemas(comp, slim)
     rows = _compute_rows(comp, slim)
@@ -852,6 +897,8 @@ def _compute_summary_data(
         top_k_changes_by_column,
         show_sample_primary_key_per_change,
         metrics_by_column,
+        change_metric_labels,
+        data_metric_labels,
     )
     sample_rows_left_only, sample_rows_right_only = _compute_sample_rows(
         comp, sample_k_rows_only
@@ -871,7 +918,8 @@ def _compute_summary_data(
         _other_common_columns=comp._other_common_columns,
         _truncated_left_name=truncated_left,
         _truncated_right_name=truncated_right,
-        _metric_labels=metric_labels,
+        _change_metric_labels=change_metric_labels,
+        _data_metric_labels=data_metric_labels,
     )
 
 
@@ -977,6 +1025,8 @@ def _compute_columns(
     top_k_changes_by_column: dict[str, int],
     show_sample_primary_key_per_change: bool,
     metrics_by_column: dict[str, dict[str, Any]],
+    change_metric_labels: list[str],
+    data_metric_labels: list[str],
 ) -> list[SummaryDataColumn] | None:
     # NOTE: We can only compute column matches if there are primary key columns and at
     # least one joined row.
@@ -1017,13 +1067,25 @@ def _compute_columns(
                         sample_pk=sample_pk,
                     )
                 )
+        col_metrics = metrics_by_column.get(col_name) or {}
+        change_metrics = {
+            label: col_metrics[label]
+            for label in change_metric_labels
+            if label in col_metrics
+        }
+        data_metrics = {
+            label: col_metrics[label]
+            for label in data_metric_labels
+            if label in col_metrics
+        }
         columns.append(
             SummaryDataColumn(
                 name=col_name,
                 match_rate=rate,
                 n_total_changes=n_total_changes,
                 changes=changes,
-                metrics=metrics_by_column.get(col_name),
+                metrics=change_metrics or None,
+                data_metrics=data_metrics or None,
             )
         )
     return columns

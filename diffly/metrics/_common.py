@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Literal
 
 import polars as pl
 import polars.selectors as cs
@@ -12,10 +13,16 @@ import polars.selectors as cs
 
 @dataclass(frozen=True)
 class Metric:
-    """A metric function paired with a column-applicability selector."""
+    """A metric function paired with a column-applicability selector.
+
+    ``kind`` selects the summary section the metric is rendered in: ``"change"`` metrics
+    appear as columns in the "Columns" table, while ``"data"`` metrics get their own
+    "Data Inspection" section.
+    """
 
     fn: MetricFn
     selector: cs.Selector
+    kind: Literal["change", "data"] = "change"
 
 
 MetricFn = Callable[[pl.Expr, pl.Expr], pl.Expr]
