@@ -131,6 +131,27 @@ def test_zero_top_k_column_changes_with_show_sample_primary_key() -> None:
         )
 
 
+def test_change_and_data_metrics_routed_to_separate_fields() -> None:
+    from diffly.metrics.data import DEFAULT_DATA_METRICS
+
+    # Joined rows id=1,2,3. value deltas (right - left) = [0, 5, null] → Mean = 2.5.
+    # value nulls: left 0/3 = 0%, right 1/3 = 33.33% → Null% = "0.0% -> 33.33% (+33.33)".
+    left = pl.DataFrame({"id": [1, 2, 3], "value": [10.0, 20.0, 30.0]})
+    right = pl.DataFrame({"id": [1, 2, 3], "value": [10.0, 25.0, None]})
+    comp = compare_frames(left, right, primary_key="id")
+
+    summary = comp.summary(
+        metrics={"Mean": metrics.mean, "Null%": DEFAULT_DATA_METRICS["Null%"]},
+    )
+    result = json.loads(summary.to_json())
+
+    (value_col,) = result["columns"]
+    assert value_col["name"] == "value"
+    # Change metric lands in `metrics`, data metric in `data_metrics`.
+    assert value_col["metrics"] == {"Mean": pytest.approx(2.5)}
+    assert value_col["data_metrics"] == {"Null%": "0.0% -> 33.33% (+33.33)"}
+
+
 def _make_comparison() -> DataFrameComparison:
     # Designed so every parametrized flag affects the expected JSON output:
     # - Same columns in both frames → schemas equal → slim suppresses schemas section
