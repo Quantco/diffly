@@ -6,7 +6,7 @@ from __future__ import annotations
 import dataclasses
 import io
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -23,7 +23,7 @@ from rich.table import Table
 from rich.text import Text
 
 from ._utils import Side, capitalize_first
-from .metrics import Metric
+from .metrics import ChangeMetric, DataMetric, Metric
 
 if TYPE_CHECKING:  # pragma: no cover
     from .comparison import DataFrameComparison
@@ -663,7 +663,12 @@ class Summary:
             row_items: list[RenderableType] = [Text(col.name, style="cyan")]
             for label in self._data._data_metric_labels:
                 value = col.data_metrics.get(label) if col.data_metrics else None
-                row_items.append(_format_metric_value(value))
+                metric = self._data._data_metrics[label]
+                row_items.append(
+                    _format_data_metric_value(
+                        value, metric.formatter, metric.delta_formatter
+                    )
+                )
             table.add_row(*row_items)
         return table
 
@@ -771,6 +776,7 @@ class SummaryData:
     _truncated_right_name: str
     _change_metric_labels: list[str]
     _data_metric_labels: list[str]
+    _data_metrics: dict[str, DataMetric]
 
     def to_dict(self) -> dict[str, Any]:
         def _convert(obj: Any) -> Any:
@@ -875,16 +881,20 @@ def _compute_summary_data(
             _truncated_right_name=truncated_right,
             _change_metric_labels=[],
             _data_metric_labels=[],
+            _data_metrics={},
         )
 
     metrics_resolved: dict[str, Metric] = dict(metrics or {})
     metrics_by_column = _compute_column_metrics(comp, metrics_resolved)
     change_metric_labels = [
-        label for label, m in metrics_resolved.items() if m.kind == "change"
+        label for label, m in metrics_resolved.items() if isinstance(m, ChangeMetric)
     ]
     data_metric_labels = [
-        label for label, m in metrics_resolved.items() if m.kind == "data"
+        label for label, m in metrics_resolved.items() if isinstance(m, DataMetric)
     ]
+    data_metrics = {
+        label: m for label, m in metrics_resolved.items() if isinstance(m, DataMetric)
+    }
 
     schemas = _compute_schemas(comp, slim)
     rows = _compute_rows(comp, slim)
@@ -918,6 +928,7 @@ def _compute_summary_data(
         _truncated_right_name=truncated_right,
         _change_metric_labels=change_metric_labels,
         _data_metric_labels=data_metric_labels,
+        _data_metrics=data_metrics,
     )
 
 
@@ -1001,18 +1012,27 @@ def _compute_column_metrics(
     out: dict[str, dict[str, Any]] = {c: {} for c in all_columns}
 
     joined = comp.joined(lazy=True)
-    agg_exprs = [
-        metric.fn(
-            pl.col(f"{column}_{Side.LEFT}"),
-            pl.col(f"{column}_{Side.RIGHT}"),
-        ).alias(f"{label}__{column}")
-        for label, metric in metrics.items()
-        for column in sorted(metric_to_columns[label])
-    ]
+    agg_exprs: list[pl.Expr] = []
+    for label, metric in metrics.items():
+        for column in sorted(metric_to_columns[label]):
+            left = pl.col(f"{column}_{Side.LEFT}")
+            right = pl.col(f"{column}_{Side.RIGHT}")
+            if isinstance(metric, ChangeMetric):
+                agg_exprs.append(metric.fn(left, right).alias(f"{label}__{column}"))
+            else:
+                agg_exprs.append(metric.fn(left).alias(f"{label}__{column}__left"))
+                agg_exprs.append(metric.fn(right).alias(f"{label}__{column}__right"))
+
     row = joined.select(agg_exprs).collect().row(0, named=True)
-    for label, columns in metric_to_columns.items():
-        for column in columns:
-            out[column][label] = row[f"{label}__{column}"]
+    for label, metric in metrics.items():
+        for column in metric_to_columns[label]:
+            if isinstance(metric, ChangeMetric):
+                out[column][label] = row[f"{label}__{column}"]
+            else:
+                out[column][label] = {
+                    "left": row[f"{label}__{column}__left"],
+                    "right": row[f"{label}__{column}__right"],
+                }
     return out
 
 
@@ -1199,6 +1219,41 @@ def _format_metric_value(value: Any) -> str:
     if isinstance(value, str):
         return _yellow(value)
     return _format_value(value, float_format=".4g")
+
+
+def _format_data_metric_value(
+    value: Any,
+    formatter: Callable[[Any], str] | None,
+    delta_formatter: Callable[[Any], str] | None,
+) -> str:
+    """Format a data metric's ``{"left", "right"}`` pair as ``<left> -> <right>``.
+
+    Numeric values additionally show the signed delta ``(<right - left>)``; non-numeric
+    values omit it. ``formatter`` formats a left/right value and ``delta_formatter`` the
+    delta magnitude (rendered with an explicit sign); either falling back to ``.4g``
+    precision for floats when unset.
+    """
+    if value is None:
+        return ""
+
+    def _fmt(v: Any, fn: Callable[[Any], str] | None) -> str:
+        if fn is not None:
+            return fn(v)
+        if isinstance(v, float):
+            return format(v, ".4g")
+        return str(v)
+
+    left, right = value["left"], value["right"]
+    text = f"{_fmt(left, formatter)} -> {_fmt(right, formatter)}"
+    if _is_numeric(left) and _is_numeric(right):
+        delta = right - left
+        sign = "+" if delta >= 0 else "-"
+        text += f" ({sign}{_fmt(abs(delta), delta_formatter or formatter)})"
+    return _yellow(text)
+
+
+def _is_numeric(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
 def _trim_whitespaces(s: str) -> str:

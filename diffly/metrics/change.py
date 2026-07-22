@@ -11,11 +11,11 @@ from __future__ import annotations
 import polars as pl
 import polars.selectors as cs
 
-from ._common import Metric, MetricFn
+from ._common import ChangeMetric, ChangeMetricFn
 
 
-def _make_numeric_metric(fn: MetricFn) -> Metric:
-    return Metric(fn=fn, selector=cs.numeric())
+def _make_numeric_metric(fn: ChangeMetricFn) -> ChangeMetric:
+    return ChangeMetric(fn=fn, selector=cs.numeric())
 
 
 def mean(left: pl.Expr, right: pl.Expr) -> pl.Expr:
@@ -54,7 +54,7 @@ def mean_relative_deviation(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     return ((right - left) / left).abs().mean()
 
 
-def quantile(q: float) -> MetricFn:
+def quantile(q: float) -> ChangeMetricFn:
     """Factory returning a metric that computes the ``q``-quantile of
     ``right - left``."""
     if not 0 <= q <= 1:
@@ -66,7 +66,7 @@ def quantile(q: float) -> MetricFn:
     return _quantile
 
 
-DEFAULT_CHANGE_METRICS: dict[str, MetricFn] = {
+DEFAULT_CHANGE_METRICS: dict[str, ChangeMetricFn] = {
     "Mean": mean,
     "Median": median,
     "Min": min,

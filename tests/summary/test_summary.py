@@ -148,7 +148,9 @@ def test_change_and_data_metrics_routed_to_separate_fields() -> None:
     assert value_col["name"] == "value"
     # Change metric lands in `change_metrics`, data metric in `data_metrics`.
     assert value_col["change_metrics"] == {"Mean": pytest.approx(2.5)}
-    assert value_col["data_metrics"] == {"Null%": "0.0% -> 33.33% (+33.33)"}
+    assert value_col["data_metrics"] == {
+        "Null%": {"left": pytest.approx(0.0), "right": pytest.approx(1 / 3)}
+    }
 
 
 def _make_comparison() -> DataFrameComparison:

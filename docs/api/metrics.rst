@@ -6,14 +6,23 @@ Metrics
 
 Metrics are scalar aggregations computed per column when generating a
 :meth:`~diffly.comparison.DataFrameComparison.summary`. Pass them via the
-``metrics`` argument as a mapping from display label to a :data:`MetricFn`
-callable. :mod:`diffly.metrics` ships a set of presets; you can also supply
-your own callable ``(left_expr, right_expr) -> pl.Expr``.
+``metrics`` argument as a mapping from display label to a metric. There are two
+families:
 
-A bare callable is only computed for numerical columns. To target a different
-set of columns, wrap it in a :class:`Metric` with a column selector, e.g.
-``Metric(fn, selector=cs.all())``, ``Metric(fn, selector=cs.boolean())``, or
-``Metric(fn, selector=cs.by_name("my_column_name"))``.
+- A :class:`ChangeMetric` describes the *change* between the two sides. Its
+  callable takes ``(left_expr, right_expr)`` and aggregates over the difference
+  (e.g. the mean delta). It is rendered as a column in the "Columns" table.
+- A :class:`DataMetric` describes each dataset *individually*. Its callable takes
+  a single column expression and is evaluated on the left and right side
+  separately (e.g. the fraction of null entries). It is rendered in the
+  "Data Inspection" section, showing the left and right value side by side.
+
+A bare callable is resolved by its arity: a two-argument callable becomes a
+:class:`ChangeMetric` (computed for numerical columns only), a one-argument
+callable becomes a :class:`DataMetric` (computed for all columns). To target a
+different set of columns, construct the metric explicitly with a column selector,
+e.g. ``ChangeMetric(fn, selector=cs.all())`` or
+``DataMetric(fn, selector=cs.boolean())``.
 
 Presets come in two families, each with its own module and default set:
 
@@ -24,10 +33,15 @@ Presets come in two families, each with its own module and default set:
 
 The change default set is exposed as :data:`DEFAULT_METRICS`.
 
-.. autodata:: MetricFn
+.. autodata:: ChangeMetricFn
    :no-value:
 
-.. autoclass:: Metric
+.. autodata:: DataMetricFn
+   :no-value:
+
+.. autoclass:: ChangeMetric
+
+.. autoclass:: DataMetric
 
 .. autodata:: DEFAULT_METRICS
    :no-value:
@@ -66,7 +80,7 @@ understand how a change affects the data.
 .. autosummary::
    :toctree: _gen/
 
-   null_fraction_change
+   null_fraction
 
 .. autodata:: DEFAULT_DATA_METRICS
    :no-value:

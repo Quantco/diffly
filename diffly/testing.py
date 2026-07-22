@@ -19,7 +19,7 @@ from diffly.summary import WIDTH
 
 from ._compat import dy
 from .comparison import DataFrameComparison, compare_frames
-from .metrics import Metric, MetricFn
+from .metrics import ChangeMetricFn, DataMetricFn, Metric
 
 
 def assert_collection_equal(
@@ -40,7 +40,7 @@ def assert_collection_equal(
     right_name: str = Side.RIGHT,
     slim: bool = False,
     hidden_columns: list[str] | None = None,
-    metrics: Mapping[str, MetricFn | Metric] | None = None,
+    metrics: Mapping[str, ChangeMetricFn | DataMetricFn | Metric] | None = None,
 ) -> None:
     """Assert that two :mod:`dataframely` collections are equal.
 
@@ -84,12 +84,13 @@ def assert_collection_equal(
             advanced users who are familiar with the summary format.
         hidden_columns: Columns for which no values are printed, e.g. because they
             contain sensitive information.
-        metrics: Optional mapping from display label to a metric callable
-            ``(left_expr, right_expr) -> pl.Expr`` or a :class:`~diffly.metrics.Metric`.
-            Bare callables are only computed for numerical columns; wrap one in a
-            :class:`~diffly.metrics.Metric` with a column selector to target other column
-            types. See :mod:`diffly.metrics` for presets. When ``None`` (default), no
-            metrics are computed; presets are not applied automatically.
+        metrics: Optional mapping from display label to a
+            :class:`~diffly.metrics.ChangeMetric`, :class:`~diffly.metrics.DataMetric`,
+            or a bare callable resolved by its arity (two arguments → change metric on
+            numerical columns, one argument → data metric on all columns). To target
+            other column types, construct the metric explicitly with a column selector.
+            See :mod:`diffly.metrics` for presets. When ``None`` (default), no metrics
+            are computed; presets are not applied automatically.
 
     Raises:
         AssertionError: If the collections are not equal.
@@ -176,7 +177,7 @@ def assert_frame_equal(
     right_name: str = Side.RIGHT,
     slim: bool = False,
     hidden_columns: list[str] | None = None,
-    metrics: Mapping[str, MetricFn | Metric] | None = None,
+    metrics: Mapping[str, ChangeMetricFn | DataMetricFn | Metric] | None = None,
 ) -> None:
     """Assert that two :mod:`polars` data frames are equal.
 
@@ -227,12 +228,13 @@ def assert_frame_equal(
             advanced users who are familiar with the summary format.
         hidden_columns: Columns for which no values are printed, e.g. because they
             contain sensitive information.
-        metrics: Optional mapping from display label to a metric callable
-            ``(left_expr, right_expr) -> pl.Expr`` or a :class:`~diffly.metrics.Metric`.
-            Bare callables are only computed for numerical columns; wrap one in a
-            :class:`~diffly.metrics.Metric` with a column selector to target other column
-            types. See :mod:`diffly.metrics` for presets. When ``None`` (default), no
-            metrics are computed; presets are not applied automatically.
+        metrics: Optional mapping from display label to a
+            :class:`~diffly.metrics.ChangeMetric`, :class:`~diffly.metrics.DataMetric`,
+            or a bare callable resolved by its arity (two arguments → change metric on
+            numerical columns, one argument → data metric on all columns). To target
+            other column types, construct the metric explicitly with a column selector.
+            See :mod:`diffly.metrics` for presets. When ``None`` (default), no metrics
+            are computed; presets are not applied automatically.
 
     Raises:
         AssertionError: If the data frames are not equal.

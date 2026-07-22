@@ -6,7 +6,7 @@ import polars.selectors as cs
 import pytest
 
 from diffly import compare_frames, metrics
-from diffly.metrics import Metric
+from diffly.metrics import ChangeMetric, DataMetric
 from diffly.metrics.data import DEFAULT_DATA_METRICS
 from tests.utils import generate_summaries
 
@@ -34,8 +34,12 @@ def test_generate() -> None:
             # Numeric-only preset alongside a metric applied to all columns.
             "Mean": metrics.mean,
             "Null%": DEFAULT_DATA_METRICS["Null%"],
-            # A user-supplied metric with a custom (string-only) selector.
-            "str_len_delta": Metric(
+            # A second, numeric data metric to render more than one data column.
+            "Distinct": DataMetric(fn=lambda col: col.n_unique()),
+            # A non-numeric data metric: rendered as ``left -> right`` without a delta.
+            "Max": DataMetric(fn=lambda col: col.max(), selector=cs.string()),
+            # A user-supplied change metric with a custom (string-only) selector.
+            "str_len_delta": ChangeMetric(
                 fn=lambda left, right: (
                     right.str.len_chars() - left.str.len_chars()
                 ).mean(),

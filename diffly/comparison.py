@@ -4,10 +4,11 @@
 from __future__ import annotations
 
 import datetime as dt
+import inspect
 import warnings
 from collections.abc import Iterable, Mapping, Sequence
 from functools import cached_property
-from typing import TYPE_CHECKING, Literal, Self, overload
+from typing import TYPE_CHECKING, Literal, Self, cast, overload
 
 import polars as pl
 from polars.schema import Schema as PolarsSchema
@@ -25,7 +26,13 @@ from ._utils import (
     lazy_len,
     make_and_validate_mapping,
 )
-from .metrics import Metric, MetricFn, _make_numeric_metric
+from .metrics import (
+    ChangeMetric,
+    ChangeMetricFn,
+    DataMetric,
+    DataMetricFn,
+    Metric,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     # NOTE: We cannot import at runtime as we're otherwise running into circular
@@ -920,7 +927,7 @@ class DataFrameComparison:
         right_name: str = Side.RIGHT,
         slim: bool = False,
         hidden_columns: list[str] | None = None,
-        metrics: Mapping[str, MetricFn | Metric] | None = None,
+        metrics: Mapping[str, ChangeMetricFn | DataMetricFn | Metric] | None = None,
     ) -> Summary:
         """Generate a summary of all aspects of the comparison.
 
@@ -951,16 +958,16 @@ class DataFrameComparison:
             hidden_columns: Columns for which no values are printed, e.g. because they
                 contain sensitive information.
             metrics: Optional mapping from display label to a metric. A value may be a
-                callable ``(left_expr, right_expr) -> pl.Expr`` or a
-                :class:`~diffly.metrics.Metric`. Each callable receives two
-                :class:`polars.Expr` referring to the left and right values of a single
-                column across all joined rows, and must return a scalar aggregation
-                expression. Bare callables are only computed for numerical columns; wrap
-                one in a :class:`~diffly.metrics.Metric` with a column selector to target
-                other column types (e.g. ``Metric(fn, selector=cs.all())``).
-                See :doc:`/api/metrics` for the full list of presets and the
-                :data:`~diffly.metrics.MetricFn` type. When ``None`` (default), no metrics
-                are computed; presets are not applied automatically. Prefer short labels —
+                :class:`~diffly.metrics.ChangeMetric` (callable
+                ``(left_expr, right_expr) -> pl.Expr`` aggregating over the change), a
+                :class:`~diffly.metrics.DataMetric` (callable ``(col_expr) -> pl.Expr``
+                evaluated on each side to describe the data), or a bare callable resolved
+                by its arity (two arguments → change metric on numerical columns, one
+                argument → data metric on all columns). To target other column types,
+                construct the metric explicitly with a column selector
+                (e.g. ``ChangeMetric(fn, selector=cs.all())``). See :doc:`/api/metrics`
+                for the full list of presets. When ``None`` (default), no metrics are
+                computed; presets are not applied automatically. Prefer short labels —
                 the summary has a fixed width and many or long labels degrade rendering.
 
         Returns:
@@ -977,11 +984,17 @@ class DataFrameComparison:
         # NOTE: We're importing here to prevent circular imports
         from .summary import Summary
 
+        def _resolve(v: ChangeMetricFn | DataMetricFn | Metric) -> Metric:
+            if isinstance(v, (ChangeMetric, DataMetric)):
+                return v
+            # Infer the metric family from the callable's arity: a single-argument
+            # callable describes one side (data), two arguments describe a change.
+            if len(inspect.signature(v).parameters) >= 2:
+                return ChangeMetric(fn=cast(ChangeMetricFn, v))
+            return DataMetric(fn=cast(DataMetricFn, v))
+
         resolved_metrics = (
-            {
-                label: v if isinstance(v, Metric) else _make_numeric_metric(v)
-                for label, v in metrics.items()
-            }
+            {label: _resolve(v) for label, v in metrics.items()}
             if metrics is not None
             else None
         )

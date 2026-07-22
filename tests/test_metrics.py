@@ -65,22 +65,16 @@ def test_mean_relative_deviation_div_by_zero() -> None:
     assert math.isinf(_apply(metrics.mean_relative_deviation, frame))
 
 
-def test_null_fraction_change() -> None:
-    # left nulls: 1/4 = 25%; right nulls: 3/4 = 75%; delta = +50%
-    frame = pl.DataFrame({"l": [1, None, 3, 4], "r": [None, None, 3, None]})
-    assert _apply(data.null_fraction_change, frame) == "25.0% -> 75.0% (+50.0)"
+def test_null_fraction() -> None:
+    # A data metric describes a single side: 1 null out of 4 rows.
+    frame = pl.DataFrame({"l": [1, None, 3, 4]})
+    assert frame.select(data.null_fraction(pl.col("l"))).item() == pytest.approx(0.25)
 
 
-def test_null_fraction_change_negative_delta() -> None:
-    # left nulls: 1/2 = 50%; right nulls: 0%; delta = -50%
-    frame = pl.DataFrame({"l": [1, None], "r": [1, 2]})
-    assert _apply(data.null_fraction_change, frame) == "50.0% -> 0.0% (-50.0)"
-
-
-def test_null_fraction_change_non_numeric() -> None:
-    # Applies to any column type; here strings. left nulls: 0%; right nulls: 50%
-    frame = pl.DataFrame({"l": ["a", "b"], "r": ["a", None]})
-    assert _apply(data.null_fraction_change, frame) == "0.0% -> 50.0% (+50.0)"
+def test_null_fraction_non_numeric() -> None:
+    # Applies to any column type; here strings. 1 null out of 2 rows.
+    frame = pl.DataFrame({"l": ["a", None]})
+    assert frame.select(data.null_fraction(pl.col("l"))).item() == pytest.approx(0.5)
 
 
 def test_quantile(frame: pl.DataFrame) -> None:

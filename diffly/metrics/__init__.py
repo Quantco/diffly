@@ -14,7 +14,14 @@ Two families are provided:
 from __future__ import annotations
 
 from . import change, data
-from ._common import Metric, MetricFn
+from ._common import (
+    ChangeMetric,
+    ChangeMetricFn,
+    DataMetric,
+    DataMetricFn,
+    Metric,
+    MetricFn,
+)
 from .change import (
     _make_numeric_metric,
     max,
@@ -26,7 +33,6 @@ from .change import (
     quantile,
     std,
 )
-from .data import _make_data_metric
 
 DEFAULT_METRICS: dict[str, MetricFn | Metric] = {
     **change.DEFAULT_CHANGE_METRICS,
@@ -35,6 +41,10 @@ DEFAULT_METRICS: dict[str, MetricFn | Metric] = {
 
 __all__ = [
     "DEFAULT_METRICS",
+    "ChangeMetric",
+    "ChangeMetricFn",
+    "DataMetric",
+    "DataMetricFn",
     "Metric",
     "MetricFn",
     "change",
@@ -48,5 +58,4 @@ __all__ = [
     "quantile",
     "std",
     "_make_numeric_metric",
-    "_make_data_metric",
 ]
