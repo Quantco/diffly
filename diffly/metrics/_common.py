@@ -15,9 +15,14 @@ import polars.selectors as cs
 class Metric:
     """A metric function paired with a column-applicability selector.
 
-    ``kind`` selects the summary section the metric is rendered in: ``"change"`` metrics
-    appear as columns in the "Columns" table, while ``"data"`` metrics get their own
-    "Data Inspection" section.
+    ``kind`` distinguishes two semantically different metric families:
+
+    - ``"change"`` metrics aggregate over ``right - left`` to quantify the *change*
+      between the two sides (e.g. the mean delta). They describe the change itself and
+      are rendered as extra columns in the "Columns" table, alongside the match rate.
+    - ``"data"`` metrics describe each dataset *individually* (e.g. the fraction of null
+      entries on each side), characterizing the data rather than the change between the
+      sides. They are rendered in a dedicated "Data Inspection" section.
     """
 
     fn: MetricFn
