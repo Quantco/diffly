@@ -146,8 +146,8 @@ def test_change_and_data_metrics_routed_to_separate_fields() -> None:
 
     (value_col,) = result["columns"]
     assert value_col["name"] == "value"
-    # Change metric lands in `metrics`, data metric in `data_metrics`.
-    assert value_col["metrics"] == {"Mean": pytest.approx(2.5)}
+    # Change metric lands in `change_metrics`, data metric in `data_metrics`.
+    assert value_col["change_metrics"] == {"Mean": pytest.approx(2.5)}
     assert value_col["data_metrics"] == {"Null%": "0.0% -> 33.33% (+33.33)"}
 
 
@@ -248,7 +248,9 @@ def test_summary_data_parametrized(
             else None
         ),
         # Joined rows (id=1,2,3): value deltas = [0, 5, 0].
-        "metrics": {"Mean": pytest.approx(5 / 3), "Max": 5.0} if with_metrics else None,
+        "change_metrics": {"Mean": pytest.approx(5 / 3), "Max": 5.0}
+        if with_metrics
+        else None,
         "data_metrics": None,
     }
     expected_columns = []
@@ -259,7 +261,7 @@ def test_summary_data_parametrized(
                 "match_rate": 1.0,
                 "n_total_changes": 0,
                 "changes": None,
-                "metrics": None,
+                "change_metrics": None,
                 "data_metrics": None,
             }
         )

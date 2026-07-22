@@ -132,7 +132,7 @@ class Summary:
                       "match_rate": 0.667,
                       "n_total_changes": 1,
                       "changes": [{"old": 1.0, "new": 2.0, "count": 1, "sample_pk": [1]}],
-                      "metrics": null,
+                      "change_metrics": null,
                       "data_metrics": null
                     }
                   ],
@@ -596,7 +596,9 @@ class Summary:
                     f"{_format_fraction_as_percentage(col.match_rate)}",
                 ]
                 for label in metric_labels:
-                    value = col.metrics.get(label) if col.metrics else None
+                    value = (
+                        col.change_metrics.get(label) if col.change_metrics else None
+                    )
                     row_items.append(_format_metric_value(value))
                 if col.changes is not None:
                     change_lines = []
@@ -748,7 +750,7 @@ class SummaryDataColumn:
     match_rate: float
     n_total_changes: int
     changes: list[SummaryDataColumnChange] | None
-    metrics: dict[str, Any] | None
+    change_metrics: dict[str, Any] | None
     data_metrics: dict[str, Any] | None
 
 
@@ -1080,7 +1082,7 @@ def _compute_columns(
                 match_rate=rate,
                 n_total_changes=n_total_changes,
                 changes=changes,
-                metrics=change_metrics or None,
+                change_metrics=change_metrics or None,
                 data_metrics=data_metrics or None,
             )
         )
