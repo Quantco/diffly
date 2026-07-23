@@ -905,13 +905,7 @@ def _compute_summary_data(
     data_metrics = {
         label: m for label, m in metrics_resolved.items() if isinstance(m, DataMetric)
     }
-    change_metrics_by_column: dict[str, dict[str, Any]] = {}
-    if comp.primary_key is not None and comp.num_rows_joined() > 0:
-        change_columns = _metric_target_columns(comp, change_metrics)
-        if any(change_columns.values()):
-            change_metrics_by_column = _compute_change_metrics(
-                comp, change_metrics, change_columns
-            )
+    change_metrics_by_column = _compute_change_metrics(comp, change_metrics)
     change_metric_labels = list(change_metrics)
 
     schemas = _compute_schemas(comp, slim)
@@ -1027,9 +1021,18 @@ def _metric_target_columns(
 def _compute_change_metrics(
     comp: DataFrameComparison,
     metrics: Mapping[str, ChangeMetric],
-    metric_to_columns: dict[str, set[str]],
 ) -> dict[str, dict[str, Any]]:
-    """Compute change metrics over the joined (matched) rows only."""
+    """Compute change metrics over the joined (matched) rows only.
+
+    Change metrics compare matched rows and therefore require a primary key and at least
+    one joined row.
+    """
+    if comp.primary_key is None or comp.num_rows_joined() == 0:
+        return {}
+    metric_to_columns = _metric_target_columns(comp, metrics)
+    if not any(metric_to_columns.values()):
+        return {}
+
     agg_exprs: list[pl.Expr] = []
     for label, metric in metrics.items():
         for column in sorted(metric_to_columns[label]):
