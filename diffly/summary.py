@@ -1247,6 +1247,8 @@ def _format_data_metric_result(
         return ""
 
     def _fmt(v: Any, fn: Callable[[Any], str] | None) -> str:
+        if v is None:
+            return "None"
         if fn is not None:
             return fn(v)
         if isinstance(v, float):
