@@ -954,14 +954,12 @@ class DataFrameComparison:
             hidden_columns: Columns for which no values are printed, e.g. because they
                 contain sensitive information.
             metrics: Optional mapping from display label to a metric. A value may be a
-                :class:`~diffly.metrics.change.ChangeMetric` (callable
-                ``(left_expr, right_expr) -> pl.Expr`` aggregating over the change), a
-                :class:`~diffly.metrics.data.DataMetric` (callable ``(col_expr) -> pl.Expr``
-                evaluated on each side to describe the data), or a bare callable resolved
+                :class:`~diffly.metrics.change.ChangeMetric`, a
+                :class:`~diffly.metrics.data.DataMetric`, or a bare callable resolved
                 by its arity (two arguments → change metric on numerical columns, one
                 argument → data metric on all columns). To target other column types,
                 construct the metric explicitly with a column selector
-                (e.g. ``ChangeMetric(fn, selector=cs.all())``). See :doc:`/api/metrics`
+                (e.g. ``ChangeMetric(fn, selector=cs.numeric())``). See :doc:`/api/metrics`
                 for the full list of presets. When ``None`` (default), no metrics are
                 computed; presets are not applied automatically. Prefer short labels —
                 the summary has a fixed width and many or long labels degrade rendering.
@@ -980,17 +978,8 @@ class DataFrameComparison:
         # NOTE: We're importing here to prevent circular imports
         from .summary import Summary
 
-        def _resolve(v: ChangeMetricFn | DataMetricFn | Metric) -> Metric:
-            if isinstance(v, (ChangeMetric, DataMetric)):
-                return v
-            # Infer the metric family from the callable's arity: a single-argument
-            # callable describes one side (data), two arguments describe a change.
-            if len(inspect.signature(v).parameters) >= 2:
-                return ChangeMetric(fn=cast(ChangeMetricFn, v))
-            return DataMetric(fn=cast(DataMetricFn, v))
-
         resolved_metrics = (
-            {label: _resolve(v) for label, v in metrics.items()}
+            {label: _resolve_metric(v) for label, v in metrics.items()}
             if metrics is not None
             else None
         )
@@ -1248,3 +1237,13 @@ def _list_length_exprs(
             for e in _list_length_exprs(expr.struct[field.name], field.dtype)
         ]
     return []
+
+
+def _resolve_metric(v: ChangeMetricFn | DataMetricFn | Metric) -> Metric:
+    if isinstance(v, (ChangeMetric, DataMetric)):
+        return v
+    # Infer the metric family from the callable's arity: a single-argument
+    # callable describes one side (data), two arguments describe a change.
+    if len(inspect.signature(v).parameters) >= 2:
+        return ChangeMetric(fn=cast(ChangeMetricFn, v))
+    return DataMetric(fn=cast(DataMetricFn, v))

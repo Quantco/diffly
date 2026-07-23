@@ -664,11 +664,11 @@ class Summary:
         for col in self._data.columns:
             row_items: list[RenderableType] = [Text(col.name, style="cyan")]
             for label in self._data._data_metric_labels:
-                value = col.data_metrics.get(label) if col.data_metrics else None
+                result = col.data_metrics.get(label) if col.data_metrics else None
                 metric = self._data._data_metrics[label]
                 row_items.append(
-                    _format_data_metric_value(
-                        value, metric.formatter, metric.delta_formatter
+                    _format_data_metric_result(
+                        result, metric.formatter, metric.delta_formatter
                     )
                 )
             table.add_row(*row_items)
@@ -752,13 +752,21 @@ class SummaryDataColumnChange:
 
 
 @dataclass
+class DataMetricResult:
+    """A data metric evaluated on each side of the comparison."""
+
+    left: Any
+    right: Any
+
+
+@dataclass
 class SummaryDataColumn:
     name: str
     match_rate: float
     n_total_changes: int
     changes: list[SummaryDataColumnChange] | None
     change_metrics: dict[str, Any] | None
-    data_metrics: dict[str, Any] | None
+    data_metrics: dict[str, DataMetricResult] | None
 
 
 @dataclass
@@ -1031,10 +1039,10 @@ def _compute_column_metrics(
             if isinstance(metric, ChangeMetric):
                 out[column][label] = row[f"{label}__{column}"]
             else:
-                out[column][label] = {
-                    "left": row[f"{label}__{column}__left"],
-                    "right": row[f"{label}__{column}__right"],
-                }
+                out[column][label] = DataMetricResult(
+                    left=row[f"{label}__{column}__left"],
+                    right=row[f"{label}__{column}__right"],
+                )
     return out
 
 
@@ -1223,19 +1231,19 @@ def _format_metric_value(value: Any) -> str:
     return _format_value(value, float_format=".4g")
 
 
-def _format_data_metric_value(
-    value: Any,
+def _format_data_metric_result(
+    result: DataMetricResult | None,
     formatter: Callable[[Any], str] | None,
     delta_formatter: Callable[[Any], str] | None,
 ) -> str:
-    """Format a data metric's ``{"left", "right"}`` pair as ``<left> -> <right>``.
+    """Format a data metric's left/right pair as ``<left> -> <right>``.
 
     Numeric values additionally show the signed delta ``(<right - left>)``; non-numeric
     values omit it. ``formatter`` formats a left/right value and ``delta_formatter`` the
     delta magnitude (rendered with an explicit sign); either falling back to ``.4g``
     precision for floats when unset.
     """
-    if value is None:
+    if result is None:
         return ""
 
     def _fmt(v: Any, fn: Callable[[Any], str] | None) -> str:
@@ -1245,10 +1253,9 @@ def _format_data_metric_value(
             return format(v, ".4g")
         return str(v)
 
-    left, right = value["left"], value["right"]
-    text = f"{_fmt(left, formatter)} -> {_fmt(right, formatter)}"
-    if _is_numeric(left) and _is_numeric(right):
-        delta = right - left
+    text = f"{_fmt(result.left, formatter)} -> {_fmt(result.right, formatter)}"
+    if _is_numeric(result.left) and _is_numeric(result.right):
+        delta = result.right - result.left
         sign = "+" if delta >= 0 else "-"
         text += f" ({sign}{_fmt(abs(delta), delta_formatter or formatter)})"
     return _yellow(text)
