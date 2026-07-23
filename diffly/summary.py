@@ -1033,12 +1033,14 @@ def _compute_change_metrics(
     if not any(metric_to_columns.values()):
         return {}
 
-    agg_exprs: list[pl.Expr] = []
-    for label, metric in metrics.items():
-        for column in sorted(metric_to_columns[label]):
-            left = pl.col(f"{column}_{Side.LEFT}")
-            right = pl.col(f"{column}_{Side.RIGHT}")
-            agg_exprs.append(metric.fn(left, right).alias(f"{label}__{column}"))
+    agg_exprs = [
+        metric.fn(
+            pl.col(f"{column}_{Side.LEFT}"),
+            pl.col(f"{column}_{Side.RIGHT}"),
+        ).alias(f"{label}__{column}")
+        for label, metric in metrics.items()
+        for column in sorted(metric_to_columns[label])
+    ]
 
     row = comp.joined(lazy=True).select(agg_exprs).collect().row(0, named=True)
     out: dict[str, dict[str, Any]] = {
