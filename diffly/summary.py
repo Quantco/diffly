@@ -641,7 +641,7 @@ class Summary:
     # ------------------------------- DATA INSPECTION -------------------------------- #
 
     def _print_data_inspection(self, console: Console) -> None:
-        if not self._data.data_inspection or not self._data._data_metric_labels:
+        if not self._data.data_inspection or not self._data._data_metrics:
             return
         _print_section(
             console,
@@ -658,11 +658,11 @@ class Summary:
             max_width=COLUMN_SECTION_COLUMN_WIDTH,
             overflow=OVERFLOW,
         )
-        for label in self._data._data_metric_labels:
+        for label in self._data._data_metrics:
             table.add_column(label, justify="right", overflow=OVERFLOW)
         for col in self._data.data_inspection:
             row_items: list[RenderableType] = [Text(col.name, style="cyan")]
-            for label in self._data._data_metric_labels:
+            for label in self._data._data_metrics:
                 result = col.data_metrics.get(label)
                 metric = self._data._data_metrics[label]
                 row_items.append(
@@ -790,7 +790,6 @@ class SummaryData:
     _truncated_left_name: str
     _truncated_right_name: str
     _change_metric_labels: list[str]
-    _data_metric_labels: list[str]
     _data_metrics: dict[str, DataMetric]
 
     def to_dict(self) -> dict[str, Any]:
@@ -896,7 +895,6 @@ def _compute_summary_data(
             _truncated_left_name=truncated_left,
             _truncated_right_name=truncated_right,
             _change_metric_labels=[],
-            _data_metric_labels=[],
             _data_metrics={},
         )
 
@@ -915,7 +913,6 @@ def _compute_summary_data(
                 comp, change_metrics, change_columns
             )
     change_metric_labels = list(change_metrics)
-    data_metric_labels = list(data_metrics)
 
     schemas = _compute_schemas(comp, slim)
     rows = _compute_rows(comp, slim)
@@ -948,7 +945,6 @@ def _compute_summary_data(
         _truncated_left_name=truncated_left,
         _truncated_right_name=truncated_right,
         _change_metric_labels=change_metric_labels,
-        _data_metric_labels=data_metric_labels,
         _data_metrics=data_metrics,
     )
 
