@@ -146,9 +146,13 @@ def test_change_and_data_metrics_routed_to_separate_fields() -> None:
 
     (value_col,) = result["columns"]
     assert value_col["name"] == "value"
-    # Change metric lands in `change_metrics`, data metric in `data_metrics`.
+    # Change metric lands in the column's `change_metrics`, data metric in the separate
+    # `data_inspection` section.
     assert value_col["change_metrics"] == {"Mean": pytest.approx(2.5)}
-    assert value_col["data_metrics"] == {
+    assert "data_metrics" not in value_col
+    (value_inspection,) = result["data_inspection"]
+    assert value_inspection["name"] == "value"
+    assert value_inspection["data_metrics"] == {
         "Null%": {"left": pytest.approx(0.0), "right": pytest.approx(1 / 3)}
     }
 
@@ -257,7 +261,6 @@ def test_summary_data_parametrized(
         "change_metrics": {"Mean": pytest.approx(5 / 3), "Max": 5.0}
         if with_metrics
         else None,
-        "data_metrics": None,
     }
     expected_columns = []
     if show_perfect_column_matches:
@@ -268,7 +271,6 @@ def test_summary_data_parametrized(
                 "n_total_changes": 0,
                 "changes": None,
                 "change_metrics": None,
-                "data_metrics": None,
             }
         )
     expected_columns.append(value_col)
@@ -288,6 +290,8 @@ def test_summary_data_parametrized(
             "n_right_only": 1,
         },
         "columns": expected_columns,
+        # Only change metrics are supplied, so the data inspection section is absent.
+        "data_inspection": None,
         "sample_rows_left_only": [[4]] if sample_rows else None,
         "sample_rows_right_only": [[5]] if sample_rows else None,
     }

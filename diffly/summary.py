@@ -134,10 +134,10 @@ class Summary:
                       "match_rate": 0.667,
                       "n_total_changes": 1,
                       "changes": [{"old": 1.0, "new": 2.0, "count": 1, "sample_pk": [1]}],
-                      "change_metrics": null,
-                      "data_metrics": null
+                      "change_metrics": null
                     }
                   ],
+                  "data_inspection": null,
                   "sample_rows_left_only": [],
                   "sample_rows_right_only": []
                 }
@@ -641,7 +641,7 @@ class Summary:
     # ------------------------------- DATA INSPECTION -------------------------------- #
 
     def _print_data_inspection(self, console: Console) -> None:
-        if not self._data.columns or not self._data._data_metric_labels:
+        if not self._data.data_inspection or not self._data._data_metric_labels:
             return
         _print_section(
             console,
@@ -650,7 +650,7 @@ class Summary:
         )
 
     def _section_data_inspection(self) -> RenderableType:
-        assert self._data.columns is not None
+        assert self._data.data_inspection is not None
 
         table = Table()
         table.add_column(
@@ -660,10 +660,10 @@ class Summary:
         )
         for label in self._data._data_metric_labels:
             table.add_column(label, justify="right", overflow=OVERFLOW)
-        for col in self._data.columns:
+        for col in self._data.data_inspection:
             row_items: list[RenderableType] = [Text(col.name, style="cyan")]
             for label in self._data._data_metric_labels:
-                result = col.data_metrics.get(label) if col.data_metrics else None
+                result = col.data_metrics.get(label)
                 metric = self._data._data_metrics[label]
                 row_items.append(
                     _format_data_metric_result(
@@ -765,7 +765,12 @@ class SummaryDataColumn:
     n_total_changes: int
     changes: list[SummaryDataColumnChange] | None
     change_metrics: dict[str, Any] | None
-    data_metrics: dict[str, DataMetricResult] | None
+
+
+@dataclass
+class SummaryDataInspectionColumn:
+    name: str
+    data_metrics: dict[str, DataMetricResult]
 
 
 @dataclass
@@ -777,6 +782,7 @@ class SummaryData:
     schemas: SummaryDataSchemas | None
     rows: SummaryDataRows | None
     columns: list[SummaryDataColumn] | None
+    data_inspection: list[SummaryDataInspectionColumn] | None
     sample_rows_left_only: list[tuple[Any, ...]] | None
     sample_rows_right_only: list[tuple[Any, ...]] | None
     _is_empty: bool
@@ -882,6 +888,7 @@ def _compute_summary_data(
             schemas=None,
             rows=None,
             columns=None,
+            data_inspection=None,
             sample_rows_left_only=None,
             sample_rows_right_only=None,
             _is_empty=is_empty,
@@ -894,16 +901,21 @@ def _compute_summary_data(
         )
 
     metrics_resolved: dict[str, Metric] = dict(metrics or {})
-    metrics_by_column = _compute_column_metrics(comp, metrics_resolved)
-    change_metric_labels = [
-        label for label, m in metrics_resolved.items() if isinstance(m, ChangeMetric)
-    ]
-    data_metric_labels = [
-        label for label, m in metrics_resolved.items() if isinstance(m, DataMetric)
-    ]
+    change_metrics = {
+        label: m for label, m in metrics_resolved.items() if isinstance(m, ChangeMetric)
+    }
     data_metrics = {
         label: m for label, m in metrics_resolved.items() if isinstance(m, DataMetric)
     }
+    change_metrics_by_column: dict[str, dict[str, Any]] = {}
+    if comp.primary_key is not None and comp.num_rows_joined() > 0:
+        change_columns = _metric_target_columns(comp, change_metrics)
+        if any(change_columns.values()):
+            change_metrics_by_column = _compute_change_metrics(
+                comp, change_metrics, change_columns
+            )
+    change_metric_labels = list(change_metrics)
+    data_metric_labels = list(data_metrics)
 
     schemas = _compute_schemas(comp, slim)
     rows = _compute_rows(comp, slim)
@@ -913,10 +925,9 @@ def _compute_summary_data(
         show_perfect_column_matches,
         top_k_changes_by_column,
         show_sample_primary_key_per_change,
-        metrics_by_column,
-        change_metric_labels,
-        data_metric_labels,
+        change_metrics_by_column,
     )
+    data_inspection = _compute_data_inspection(comp, data_metrics)
     sample_rows_left_only, sample_rows_right_only = _compute_sample_rows(
         comp, sample_k_rows_only
     )
@@ -929,6 +940,7 @@ def _compute_summary_data(
         schemas=schemas,
         rows=rows,
         columns=columns,
+        data_inspection=data_inspection,
         sample_rows_left_only=sample_rows_left_only,
         sample_rows_right_only=sample_rows_right_only,
         _is_empty=is_empty,
@@ -999,49 +1011,69 @@ def _compute_rows(comp: DataFrameComparison, slim: bool) -> SummaryDataRows | No
     )
 
 
-def _compute_column_metrics(
-    comp: DataFrameComparison,
-    metrics: Mapping[str, Metric],
-) -> dict[str, dict[str, Any]]:
-    if comp.primary_key is None or comp.num_rows_joined() == 0:
-        return {}
+def _select_metric_columns(
+    comp: DataFrameComparison, selector: cs.Selector
+) -> set[str]:
+    left = set(cs.expand_selector(comp.left_schema, selector))
+    right = set(cs.expand_selector(comp.right_schema, selector))
+    return (left & right) & set(comp._other_common_columns)
 
-    def select_columns(selector: cs.Selector) -> set[str]:
-        left = set(cs.expand_selector(comp.left_schema, selector))
-        right = set(cs.expand_selector(comp.right_schema, selector))
-        return (left & right) & set(comp._other_common_columns)
 
-    metric_to_columns = {
-        label: select_columns(m.selector) for label, m in metrics.items()
+def _metric_target_columns(
+    comp: DataFrameComparison, metrics: Mapping[str, Metric]
+) -> dict[str, set[str]]:
+    """Map each metric label to the columns it applies to."""
+    return {
+        label: _select_metric_columns(comp, m.selector) for label, m in metrics.items()
     }
 
-    all_columns = sorted(set().union(*metric_to_columns.values()))
-    if not all_columns:
-        return {}
-    out: dict[str, dict[str, Any]] = {c: {} for c in all_columns}
 
-    joined = comp.joined(lazy=True)
+def _compute_change_metrics(
+    comp: DataFrameComparison,
+    metrics: Mapping[str, ChangeMetric],
+    metric_to_columns: dict[str, set[str]],
+) -> dict[str, dict[str, Any]]:
+    """Compute change metrics over the joined (matched) rows only."""
     agg_exprs: list[pl.Expr] = []
     for label, metric in metrics.items():
         for column in sorted(metric_to_columns[label]):
             left = pl.col(f"{column}_{Side.LEFT}")
             right = pl.col(f"{column}_{Side.RIGHT}")
-            if isinstance(metric, ChangeMetric):
-                agg_exprs.append(metric.fn(left, right).alias(f"{label}__{column}"))
-            else:
-                agg_exprs.append(metric.fn(left).alias(f"{label}__{column}__left"))
-                agg_exprs.append(metric.fn(right).alias(f"{label}__{column}__right"))
+            agg_exprs.append(metric.fn(left, right).alias(f"{label}__{column}"))
 
-    row = joined.select(agg_exprs).collect().row(0, named=True)
-    for label, metric in metrics.items():
+    row = comp.joined(lazy=True).select(agg_exprs).collect().row(0, named=True)
+    out: dict[str, dict[str, Any]] = {
+        c: {} for c in set().union(*metric_to_columns.values())
+    }
+    for label in metrics:
         for column in metric_to_columns[label]:
-            if isinstance(metric, ChangeMetric):
-                out[column][label] = row[f"{label}__{column}"]
-            else:
-                out[column][label] = DataMetricResult(
-                    left=row[f"{label}__{column}__left"],
-                    right=row[f"{label}__{column}__right"],
-                )
+            out[column][label] = row[f"{label}__{column}"]
+    return out
+
+
+def _compute_data_metrics(
+    comp: DataFrameComparison,
+    metrics: Mapping[str, DataMetric],
+    metric_to_columns: dict[str, set[str]],
+) -> dict[str, dict[str, Any]]:
+    """Compute data metrics over the entire left and right columns, including rows that
+    are not part of the join."""
+    agg_exprs: list[pl.Expr] = []
+    for label, metric in metrics.items():
+        for column in sorted(metric_to_columns[label]):
+            agg_exprs.append(metric.fn(pl.col(column)).alias(f"{label}__{column}"))
+
+    left_row = comp.left.select(agg_exprs).collect().row(0, named=True)
+    right_row = comp.right.select(agg_exprs).collect().row(0, named=True)
+    out: dict[str, dict[str, Any]] = {
+        c: {} for c in set().union(*metric_to_columns.values())
+    }
+    for label in metrics:
+        for column in metric_to_columns[label]:
+            out[column][label] = DataMetricResult(
+                left=left_row[f"{label}__{column}"],
+                right=right_row[f"{label}__{column}"],
+            )
     return out
 
 
@@ -1051,9 +1083,7 @@ def _compute_columns(
     show_perfect_column_matches: bool,
     top_k_changes_by_column: dict[str, int],
     show_sample_primary_key_per_change: bool,
-    metrics_by_column: dict[str, dict[str, Any]],
-    change_metric_labels: list[str],
-    data_metric_labels: list[str],
+    change_metrics_by_column: dict[str, dict[str, Any]],
 ) -> list[SummaryDataColumn] | None:
     # NOTE: We can only compute column matches if there are primary key columns and at
     # least one joined row.
@@ -1094,28 +1124,35 @@ def _compute_columns(
                         sample_pk=sample_pk,
                     )
                 )
-        col_metrics = metrics_by_column.get(col_name) or {}
-        change_metrics = {
-            label: col_metrics[label]
-            for label in change_metric_labels
-            if label in col_metrics
-        }
-        data_metrics = {
-            label: col_metrics[label]
-            for label in data_metric_labels
-            if label in col_metrics
-        }
         columns.append(
             SummaryDataColumn(
                 name=col_name,
                 match_rate=rate,
                 n_total_changes=n_total_changes,
                 changes=changes,
-                change_metrics=change_metrics or None,
-                data_metrics=data_metrics or None,
+                change_metrics=change_metrics_by_column.get(col_name) or None,
             )
         )
     return columns
+
+
+def _compute_data_inspection(
+    comp: DataFrameComparison,
+    metrics: Mapping[str, DataMetric],
+) -> list[SummaryDataInspectionColumn] | None:
+    # NOTE: Data metrics describe each side individually and do not need a join, but we
+    # still require the columns to be present on both sides so left/right values are
+    # comparable.
+    metric_to_columns = _metric_target_columns(comp, metrics)
+    if not any(metric_to_columns.values()):
+        return None
+    data_metrics_by_column = _compute_data_metrics(comp, metrics, metric_to_columns)
+    return [
+        SummaryDataInspectionColumn(
+            name=col_name, data_metrics=data_metrics_by_column[col_name]
+        )
+        for col_name in sorted(data_metrics_by_column)
+    ]
 
 
 def _compute_sample_rows(
