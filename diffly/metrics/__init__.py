@@ -4,10 +4,10 @@
 
 Two families are provided:
 
-- Metrics in :mod:`~diffly.metrics.change` describe the change between numeric
-  columns itself by aggregating over ``right - left``.
-- Metrics in :mod:`~diffly.metrics.data` describe the left and right datasets
-  individually, explaining how a change affects the data.
+- :class:`ChangeMetrics` in :mod:`~diffly.metrics.change` describe the change between
+  numeric columns itself by aggregating over ``right - left``.
+- :class:`DataMetrics` in :mod:`~diffly.metrics.data` describe the left and right
+  datasets individually, explaining how a change affects the data.
 """
 
 from __future__ import annotations

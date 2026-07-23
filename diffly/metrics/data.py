@@ -1,10 +1,5 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
-"""Metrics describing the left and right datasets individually.
-
-These characterize each side of a change so you can understand how the change affects
-the data, rather than describing the change itself.
-"""
 
 from __future__ import annotations
 
@@ -16,11 +11,7 @@ import polars as pl
 import polars.selectors as cs
 
 DataMetricFn = Callable[[pl.Expr], pl.Expr]
-"""A data metric maps a single column expression to a scalar aggregation expression.
-
-It is evaluated on both data frames individually, and the change between them is
-rendered.
-"""
+"""A data metric maps a single column expression to a scalar aggregation expression."""
 
 
 @dataclass(frozen=True)
@@ -45,12 +36,13 @@ class DataMetric:
     """
 
     delta_formatter: Callable[[Any], str] | None = None
-    """Formats the (always non-negative) magnitude of the delta, which is rendered with
-    an explicit sign.
+    """Formats the magnitude of the delta, which is rendered with an explicit sign.
 
-    Falls back to ``formatter`` when ``None``, which in turn falls back to the default
-    numeric precision when unset.
+    Falls back to ``formatter`` when ``None``.
     """
+
+
+# ----------------------------------- DATA METRICS ----------------------------------- #
 
 
 def null_fraction(col: pl.Expr) -> pl.Expr:
