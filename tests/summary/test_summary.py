@@ -13,7 +13,7 @@ import pytest
 
 from diffly import compare_frames, metrics
 from diffly.comparison import DataFrameComparison
-from diffly.metrics.data import DEFAULT_DATA_METRICS
+from diffly.metrics.data import DEFAULT_DATA_METRICS, DataMetric
 from diffly.summary import _format_fraction_as_percentage, to_json_safe
 
 
@@ -155,6 +155,23 @@ def test_change_and_data_metrics_routed_to_separate_fields() -> None:
     assert value_inspection["data_metrics"] == {
         "Null%": {"left": pytest.approx(0.0), "right": pytest.approx(1 / 3)}
     }
+
+
+def test_data_metrics_consider_unjoined_rows() -> None:
+    # Joined rows are id=1,2,3. The extreme `value`s live in unjoined rows: id=4 is
+    # left-only (999.0) and id=5 is right-only (888.0). A data metric that only looked at
+    # the joined rows would report max 30.0 on both sides, so the metric picking these up
+    # proves it considers values from unjoined rows.
+    left = pl.DataFrame({"id": [1, 2, 3, 4], "value": [10.0, 20.0, 30.0, 999.0]})
+    right = pl.DataFrame({"id": [1, 2, 3, 5], "value": [10.0, 25.0, 30.0, 888.0]})
+    comp = compare_frames(left, right, primary_key="id")
+
+    summary = comp.summary(metrics={"Max": DataMetric(fn=lambda col: col.max())})
+    result = json.loads(summary.to_json())
+
+    (value_inspection,) = result["data_inspection"]
+    assert value_inspection["name"] == "value"
+    assert value_inspection["data_metrics"] == {"Max": {"left": 999.0, "right": 888.0}}
 
 
 def _make_comparison() -> DataFrameComparison:
