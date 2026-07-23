@@ -140,7 +140,7 @@ def test_change_and_data_metrics_routed_to_separate_fields() -> None:
     comp = compare_frames(left, right, primary_key="id")
 
     summary = comp.summary(
-        metrics={"Mean": metrics.mean, "Null%": DEFAULT_DATA_METRICS["Null%"]},
+        metrics={"Mean": metrics.change.mean, "Null%": DEFAULT_DATA_METRICS["Null%"]},
     )
     result = json.loads(summary.to_json())
 
@@ -203,7 +203,11 @@ def test_summary_data_parametrized(
     comp = _make_comparison()
     top_k = 3 if show_top_column_changes else 0
     hidden_columns = ["value"] if hide_value else None
-    metrics_arg = {"Mean": metrics.mean, "Max": metrics.max} if with_metrics else None
+    metrics_arg = (
+        {"Mean": metrics.change.mean, "Max": metrics.change.max}
+        if with_metrics
+        else None
+    )
     summary = comp.summary(
         show_perfect_column_matches=show_perfect_column_matches,
         top_k_column_changes=top_k,

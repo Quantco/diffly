@@ -31,12 +31,12 @@ def test_generate() -> None:
     generate_summaries(
         comp,
         metrics={
-            "Mean Delta": metrics.mean,
-            "Median Delta": metrics.median,
-            "Minimum Delta": metrics.min,
-            "Maximum Delta": metrics.max,
-            "Standard Deviation": metrics.std,
-            "Mean Absolute Deviation": metrics.mean_absolute_deviation,
-            "Mean Relative Deviation": metrics.mean_relative_deviation,
+            "Mean Delta": metrics.change.mean,
+            "Median Delta": metrics.change.median,
+            "Minimum Delta": metrics.change.min,
+            "Maximum Delta": metrics.change.max,
+            "Standard Deviation": metrics.change.std,
+            "Mean Absolute Deviation": metrics.change.mean_absolute_deviation,
+            "Mean Relative Deviation": metrics.change.mean_relative_deviation,
         },
     )

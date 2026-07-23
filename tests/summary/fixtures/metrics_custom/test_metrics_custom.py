@@ -30,8 +30,8 @@ def test_generate() -> None:
     generate_summaries(
         comp,
         metrics={
-            "mean_delta": metrics.mean,
-            "p95_delta": metrics.quantile(0.95),
+            "mean_delta": metrics.change.mean,
+            "p95_delta": metrics.change.quantile(0.95),
             "max_abs_delta": lambda left, right: (right - left).abs().max(),
         },
     )

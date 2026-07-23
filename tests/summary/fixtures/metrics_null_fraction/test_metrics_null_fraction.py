@@ -6,8 +6,8 @@ import polars.selectors as cs
 import pytest
 
 from diffly import compare_frames, metrics
-from diffly.metrics import ChangeMetric, DataMetric
-from diffly.metrics.data import DEFAULT_DATA_METRICS
+from diffly.metrics.change import ChangeMetric
+from diffly.metrics.data import DEFAULT_DATA_METRICS, DataMetric
 from tests.utils import generate_summaries
 
 
@@ -32,7 +32,7 @@ def test_generate() -> None:
         comp,
         metrics={
             # Numeric-only preset alongside a metric applied to all columns.
-            "Mean": metrics.mean,
+            "Mean": metrics.change.mean,
             "Null%": DEFAULT_DATA_METRICS["Null%"],
             # A second, numeric data metric to render more than one data column.
             "Distinct": DataMetric(fn=lambda col: col.n_unique()),

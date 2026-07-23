@@ -26,13 +26,9 @@ from ._utils import (
     lazy_len,
     make_and_validate_mapping,
 )
-from .metrics import (
-    ChangeMetric,
-    ChangeMetricFn,
-    DataMetric,
-    DataMetricFn,
-    Metric,
-)
+from .metrics._common import Metric
+from .metrics.change import ChangeMetric, ChangeMetricFn
+from .metrics.data import DataMetric, DataMetricFn
 
 if TYPE_CHECKING:  # pragma: no cover
     # NOTE: We cannot import at runtime as we're otherwise running into circular
@@ -958,9 +954,9 @@ class DataFrameComparison:
             hidden_columns: Columns for which no values are printed, e.g. because they
                 contain sensitive information.
             metrics: Optional mapping from display label to a metric. A value may be a
-                :class:`~diffly.metrics.ChangeMetric` (callable
+                :class:`~diffly.metrics.change.ChangeMetric` (callable
                 ``(left_expr, right_expr) -> pl.Expr`` aggregating over the change), a
-                :class:`~diffly.metrics.DataMetric` (callable ``(col_expr) -> pl.Expr``
+                :class:`~diffly.metrics.data.DataMetric` (callable ``(col_expr) -> pl.Expr``
                 evaluated on each side to describe the data), or a bare callable resolved
                 by its arity (two arguments → change metric on numerical columns, one
                 argument → data metric on all columns). To target other column types,

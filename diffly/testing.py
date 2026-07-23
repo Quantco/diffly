@@ -19,7 +19,9 @@ from diffly.summary import WIDTH
 
 from ._compat import dy
 from .comparison import DataFrameComparison, compare_frames
-from .metrics import ChangeMetricFn, DataMetricFn, Metric
+from .metrics._common import Metric
+from .metrics.change import ChangeMetricFn
+from .metrics.data import DataMetricFn
 
 
 def assert_collection_equal(
@@ -85,7 +87,7 @@ def assert_collection_equal(
         hidden_columns: Columns for which no values are printed, e.g. because they
             contain sensitive information.
         metrics: Optional mapping from display label to a
-            :class:`~diffly.metrics.ChangeMetric`, :class:`~diffly.metrics.DataMetric`,
+            :class:`~diffly.metrics.change.ChangeMetric`, :class:`~diffly.metrics.data.DataMetric`,
             or a bare callable resolved by its arity (two arguments → change metric on
             numerical columns, one argument → data metric on all columns). To target
             other column types, construct the metric explicitly with a column selector.
@@ -229,7 +231,7 @@ def assert_frame_equal(
         hidden_columns: Columns for which no values are printed, e.g. because they
             contain sensitive information.
         metrics: Optional mapping from display label to a
-            :class:`~diffly.metrics.ChangeMetric`, :class:`~diffly.metrics.DataMetric`,
+            :class:`~diffly.metrics.change.ChangeMetric`, :class:`~diffly.metrics.data.DataMetric`,
             or a bare callable resolved by its arity (two arguments → change metric on
             numerical columns, one argument → data metric on all columns). To target
             other column types, construct the metric explicitly with a column selector.

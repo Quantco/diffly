@@ -23,7 +23,9 @@ from rich.table import Table
 from rich.text import Text
 
 from ._utils import Side, capitalize_first
-from .metrics import ChangeMetric, DataMetric, Metric
+from .metrics._common import Metric
+from .metrics.change import ChangeMetric
+from .metrics.data import DataMetric
 
 if TYPE_CHECKING:  # pragma: no cover
     from .comparison import DataFrameComparison

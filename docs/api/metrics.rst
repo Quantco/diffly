@@ -9,20 +9,21 @@ Metrics are scalar aggregations computed per column when generating a
 ``metrics`` argument as a mapping from display label to a metric. There are two
 families:
 
-- A :class:`ChangeMetric` describes the *change* between the two sides. Its
-  callable takes ``(left_expr, right_expr)`` and aggregates over the difference
-  (e.g. the mean delta). It is rendered as a column in the "Columns" table.
-- A :class:`DataMetric` describes each dataset *individually*. Its callable takes
-  a single column expression and is evaluated on the left and right side
-  separately (e.g. the fraction of null entries). It is rendered in the
+- A :class:`~diffly.metrics.change.ChangeMetric` describes the *change* between
+  the two sides. Its callable takes ``(left_expr, right_expr)`` and aggregates over
+  the difference (e.g. the mean delta). It is rendered as a column in the "Columns"
+  table.
+- A :class:`~diffly.metrics.data.DataMetric` describes each dataset *individually*.
+  Its callable takes a single column expression and is evaluated on the left and
+  right side separately (e.g. the fraction of null entries). It is rendered in the
   "Data Inspection" section, showing the left and right value side by side.
 
 A bare callable is resolved by its arity: a two-argument callable becomes a
-:class:`ChangeMetric` (computed for numerical columns only), a one-argument
-callable becomes a :class:`DataMetric` (computed for all columns). To target a
-different set of columns, construct the metric explicitly with a column selector,
-e.g. ``ChangeMetric(fn, selector=cs.all())`` or
-``DataMetric(fn, selector=cs.boolean())``.
+:class:`~diffly.metrics.change.ChangeMetric` (computed for numerical columns only),
+a one-argument callable becomes a :class:`~diffly.metrics.data.DataMetric`
+(computed for all columns). To target a different set of columns, construct the
+metric explicitly with a column selector, e.g. ``ChangeMetric(fn, selector=cs.all())``
+or ``DataMetric(fn, selector=cs.boolean())``.
 
 Presets come in two families, each with its own module and default set:
 
@@ -34,16 +35,6 @@ Presets come in two families, each with its own module and default set:
 The preset default sets are :data:`~diffly.metrics.change.DEFAULT_CHANGE_METRICS`
 and :data:`~diffly.metrics.data.DEFAULT_DATA_METRICS`.
 
-.. autodata:: ChangeMetricFn
-   :no-value:
-
-.. autodata:: DataMetricFn
-   :no-value:
-
-.. autoclass:: ChangeMetric
-
-.. autoclass:: DataMetric
-
 Change metrics
 ==============
 
@@ -51,6 +42,11 @@ Change metrics
 
 Metrics that describe the change between numeric columns by aggregating over
 ``right - left``.
+
+.. autodata:: ChangeMetricFn
+   :no-value:
+
+.. autoclass:: ChangeMetric
 
 .. autosummary::
    :toctree: _gen/
@@ -74,6 +70,11 @@ Data metrics
 
 Metrics that describe the left and right datasets individually, so you can
 understand how a change affects the data.
+
+.. autodata:: DataMetricFn
+   :no-value:
+
+.. autoclass:: DataMetric
 
 .. autosummary::
    :toctree: _gen/
