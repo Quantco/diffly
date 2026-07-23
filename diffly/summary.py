@@ -576,15 +576,14 @@ class Summary:
         elif not columns:
             display_items.append(Text("All columns match perfectly.", style="italic"))
         else:
-            metric_labels = self._data._change_metric_labels
-            matches = Table(show_header=bool(metric_labels))
+            matches = Table(show_header=bool(self._data._change_metric_labels))
             matches.add_column(
                 "Column",
                 max_width=COLUMN_SECTION_COLUMN_WIDTH,
                 overflow=OVERFLOW,
             )
             matches.add_column("Match Rate", justify="right")
-            for label in metric_labels:
+            for label in self._data._change_metric_labels:
                 matches.add_column(label, justify="right")
             has_top_changes_column = any(
                 c.changes is not None for c in columns if c.match_rate < 1
@@ -597,7 +596,7 @@ class Summary:
                     Text(col.name, style="cyan"),
                     f"{_format_fraction_as_percentage(col.match_rate)}",
                 ]
-                for label in metric_labels:
+                for label in self._data._change_metric_labels:
                     value = (
                         col.change_metrics.get(label) if col.change_metrics else None
                     )
