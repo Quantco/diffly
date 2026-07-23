@@ -13,6 +13,6 @@ Two families are provided:
 from __future__ import annotations
 
 from . import change, data
-from ._common import ALL_METRICS, Metric
+from ._common import ALL_METRICS
 
-__all__ = ["ALL_METRICS", "Metric", "change", "data"]
+__all__ = ["ALL_METRICS", "change", "data"]
