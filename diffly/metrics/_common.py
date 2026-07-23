@@ -11,17 +11,14 @@ import polars as pl
 import polars.selectors as cs
 
 ChangeMetricFn = Callable[[pl.Expr, pl.Expr], pl.Expr]
-"""A change metric maps ``(left_expr, right_expr)`` to a scalar aggregation expression.
-
-The expressions refer to the left-side and right-side values of a single column across
-all joined rows.
-"""
+"""A change metric maps the difference between two joined columns from the compared data
+frames to a scalar aggregation expression."""
 
 DataMetricFn = Callable[[pl.Expr], pl.Expr]
 """A data metric maps a single column expression to a scalar aggregation expression.
 
-It is evaluated on the left and right side separately to describe each dataset on its
-own, rather than the change between them.
+It is evaluated on both data frames individually, and the change between them is
+rendered.
 """
 
 # Retained for backwards compatibility; a plain metric callable is a change metric.
@@ -32,35 +29,46 @@ MetricFn = ChangeMetricFn
 class ChangeMetric:
     """A metric quantifying the *change* between the two sides of a comparison.
 
-    ``fn`` aggregates over ``right - left`` (e.g. the mean delta) to describe the change
-    itself. Change metrics are rendered as extra columns in the "Columns" table,
-    alongside the match rate.
+    Change metrics are rendered as extra columns in the "Columns" table, alongside the
+    match rate.
     """
 
     fn: ChangeMetricFn
+    """Aggregates over ``right - left`` (e.g. the mean delta) to describe the change
+    itself."""
+
     selector: cs.Selector = field(default_factory=cs.numeric)
+    """Selects the columns the metric applies to; defaults to numeric columns."""
 
 
 @dataclass(frozen=True)
 class DataMetric:
     """A metric describing each dataset *individually*.
 
-    ``fn`` is applied to the left and right side separately (e.g. the fraction of null
-    entries on each side), characterizing the data rather than the change between the
-    sides. Data metrics are rendered in a dedicated "Data Inspection" section, showing
-    the left and right value side by side, followed by their signed delta for numeric
-    values.
-
-    ``formatter`` formats a single left/right value for display. ``delta_formatter``
-    formats the (always non-negative) magnitude of the delta, which is rendered with an
-    explicit sign; when ``None``, it falls back to ``formatter``. Both fall back to the
-    default numeric precision when unset.
+    Data metrics are rendered in a dedicated "Data Inspection" section, showing the left
+    and right value side by side, followed by their signed delta for numeric values.
     """
 
     fn: DataMetricFn
+    """Applied to the left and right side separately, characterizing the data rather
+    than the change between the sides."""
+
     selector: cs.Selector = field(default_factory=cs.all)
+    """Selects the columns the metric applies to; defaults to all columns."""
+
     formatter: Callable[[Any], str] | None = None
+    """Formats a single left/right value for display.
+
+    Falls back to the default numeric precision when unset.
+    """
+
     delta_formatter: Callable[[Any], str] | None = None
+    """Formats the (always non-negative) magnitude of the delta, which is rendered with
+    an explicit sign.
+
+    Falls back to ``formatter`` when ``None``, which in turn falls back to the default
+    numeric precision when unset.
+    """
 
 
 Metric = ChangeMetric | DataMetric

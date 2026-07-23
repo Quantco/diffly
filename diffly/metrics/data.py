@@ -1,6 +1,5 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
-
 """Metrics describing the left and right datasets individually.
 
 These characterize each side of a change so you can understand how the change affects
@@ -16,11 +15,7 @@ from ._common import DataMetric
 
 
 def null_fraction(col: pl.Expr) -> pl.Expr:
-    """Fraction of null entries in a column.
-
-    Evaluated on each side separately and rendered as a percentage. This metric can be
-    applied to columns of any type.
-    """
+    """Fraction of null entries in a column."""
     return col.is_null().mean()
 
 
