@@ -82,13 +82,13 @@ def quantile(q: float) -> ChangeMetricFn:
     return _quantile
 
 
-DEFAULT_CHANGE_METRICS: dict[str, ChangeMetricFn] = {
-    "Mean": mean,
-    "Median": median,
-    "Min": min,
-    "Max": max,
-    "Std": std,
-    "Mean absolute deviation": mean_absolute_deviation,
-    "Mean relative deviation": mean_relative_deviation,
+DEFAULT_CHANGE_METRICS: dict[str, ChangeMetric] = {
+    "Mean": ChangeMetric(fn=mean),
+    "Median": ChangeMetric(fn=median),
+    "Min": ChangeMetric(fn=min),
+    "Max": ChangeMetric(fn=max),
+    "Std": ChangeMetric(fn=std),
+    "Mean absolute deviation": ChangeMetric(fn=mean_absolute_deviation),
+    "Mean relative deviation": ChangeMetric(fn=mean_relative_deviation),
 }
 """Preset metrics describing the change between numeric columns."""

@@ -12,14 +12,14 @@ from diffly import compare_frames
 
 from ._compat import typer
 from ._utils import ABS_TOL_DEFAULT, ABS_TOL_TEMPORAL_DEFAULT, REL_TOL_DEFAULT
-from .metrics import ChangeMetricFn, Metric
+from .metrics import Metric
 from .metrics.change import DEFAULT_CHANGE_METRICS
 from .metrics.data import DEFAULT_DATA_METRICS
 
 app = typer.Typer()
 
 #: All metric presets selectable via ``--metric``, combining the change and data sets.
-AVAILABLE_METRICS: dict[str, ChangeMetricFn | Metric] = {
+AVAILABLE_METRICS: dict[str, Metric] = {
     **DEFAULT_CHANGE_METRICS,
     **DEFAULT_DATA_METRICS,
 }
