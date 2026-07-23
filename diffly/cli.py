@@ -12,17 +12,9 @@ from diffly import compare_frames
 
 from ._compat import typer
 from ._utils import ABS_TOL_DEFAULT, ABS_TOL_TEMPORAL_DEFAULT, REL_TOL_DEFAULT
-from .metrics import Metric
-from .metrics.change import DEFAULT_CHANGE_METRICS
-from .metrics.data import DEFAULT_DATA_METRICS
+from .metrics import ALL_METRICS
 
 app = typer.Typer()
-
-#: All metric presets selectable via ``--metric``, combining the change and data sets.
-AVAILABLE_METRICS: dict[str, Metric] = {
-    **DEFAULT_CHANGE_METRICS,
-    **DEFAULT_DATA_METRICS,
-}
 
 
 @app.command()
@@ -148,7 +140,7 @@ def main(
         typer.Option(
             help=(
                 "Metric presets to display per column. Repeatable. "
-                f"Available: {', '.join(AVAILABLE_METRICS)}."
+                f"Available: {', '.join(ALL_METRICS)}."
             )
         ),
     ] = [],
@@ -162,11 +154,11 @@ def main(
         hidden_column = [*hidden_column, *hidden_columns]
 
     for name in metric:
-        if name not in AVAILABLE_METRICS:
+        if name not in ALL_METRICS:
             raise typer.BadParameter(
-                f"Unknown metric: {name!r}. Available: {', '.join(AVAILABLE_METRICS)}."
+                f"Unknown metric: {name!r}. Available: {', '.join(ALL_METRICS)}."
             )
-    metrics = {name: AVAILABLE_METRICS[name] for name in metric}
+    metrics = {name: ALL_METRICS[name] for name in metric}
 
     comparison = compare_frames(
         pl.scan_parquet(left),
