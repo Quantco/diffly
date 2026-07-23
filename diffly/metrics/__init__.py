@@ -1,6 +1,5 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
-
 """Metrics computed per column when generating a summary.
 
 Two families are provided:
@@ -14,16 +13,10 @@ Two families are provided:
 from __future__ import annotations
 
 from . import change, data
-from ._common import (
+from ._common import Metric
+from .change import (
     ChangeMetric,
     ChangeMetricFn,
-    DataMetric,
-    DataMetricFn,
-    Metric,
-    MetricFn,
-)
-from .change import (
-    _make_numeric_metric,
     max,
     mean,
     mean_absolute_deviation,
@@ -33,20 +26,14 @@ from .change import (
     quantile,
     std,
 )
-
-DEFAULT_METRICS: dict[str, MetricFn | Metric] = {
-    **change.DEFAULT_CHANGE_METRICS,
-}
-"""The default preset metrics, consisting of the change default set."""
+from .data import DataMetric, DataMetricFn
 
 __all__ = [
-    "DEFAULT_METRICS",
     "ChangeMetric",
     "ChangeMetricFn",
     "DataMetric",
     "DataMetricFn",
     "Metric",
-    "MetricFn",
     "change",
     "data",
     "max",
@@ -57,5 +44,4 @@ __all__ = [
     "min",
     "quantile",
     "std",
-    "_make_numeric_metric",
 ]

@@ -31,7 +31,8 @@ Presets come in two families, each with its own module and default set:
 - :mod:`diffly.metrics.data` describes the left and right datasets *individually*,
   so you can see how a change affects the data.
 
-The change default set is exposed as :data:`DEFAULT_METRICS`.
+The preset default sets are :data:`~diffly.metrics.change.DEFAULT_CHANGE_METRICS`
+and :data:`~diffly.metrics.data.DEFAULT_DATA_METRICS`.
 
 .. autodata:: ChangeMetricFn
    :no-value:
@@ -42,9 +43,6 @@ The change default set is exposed as :data:`DEFAULT_METRICS`.
 .. autoclass:: ChangeMetric
 
 .. autoclass:: DataMetric
-
-.. autodata:: DEFAULT_METRICS
-   :no-value:
 
 Change metrics
 ==============

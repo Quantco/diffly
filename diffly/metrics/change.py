@@ -1,6 +1,5 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
-
 """Metrics describing the change between numeric columns.
 
 These aggregate over ``right - left`` to characterize the change itself.
@@ -8,14 +7,31 @@ These aggregate over ``right - left`` to characterize the change itself.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass, field
+
 import polars as pl
 import polars.selectors as cs
 
-from ._common import ChangeMetric, ChangeMetricFn
+ChangeMetricFn = Callable[[pl.Expr, pl.Expr], pl.Expr]
+"""A change metric maps the difference between two joined columns from the compared data
+frames to a scalar aggregation expression."""
 
 
-def _make_numeric_metric(fn: ChangeMetricFn) -> ChangeMetric:
-    return ChangeMetric(fn=fn, selector=cs.numeric())
+@dataclass(frozen=True)
+class ChangeMetric:
+    """A metric quantifying the *change* between the two sides of a comparison.
+
+    Change metrics are rendered as extra columns in the "Columns" table, alongside the
+    match rate.
+    """
+
+    fn: ChangeMetricFn
+    """Aggregates over ``right - left`` (e.g. the mean delta) to describe the change
+    itself."""
+
+    selector: cs.Selector = field(default_factory=cs.numeric)
+    """Selects the columns the metric applies to; defaults to numeric columns."""
 
 
 def mean(left: pl.Expr, right: pl.Expr) -> pl.Expr:

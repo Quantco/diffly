@@ -8,7 +8,7 @@ import polars as pl
 import pytest
 
 from diffly import metrics
-from diffly.metrics import MetricFn, data
+from diffly.metrics import ChangeMetricFn, data
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ def frame() -> pl.DataFrame:
     return pl.DataFrame({"l": [1, 2, 3, None], "r": [1, 2, 5, 4]})
 
 
-def _apply(metric: MetricFn, frame: pl.DataFrame) -> Any:
+def _apply(metric: ChangeMetricFn, frame: pl.DataFrame) -> Any:
     return frame.select(metric(pl.col("l"), pl.col("r"))).item()
 
 
@@ -91,7 +91,5 @@ def test_quantile_out_of_range() -> None:
 def test_default_metrics_partition() -> None:
     from diffly.metrics import change
 
-    # The top-level defaults consist of the change metrics only.
-    assert metrics.DEFAULT_METRICS == {**change.DEFAULT_CHANGE_METRICS}
+    # The change and data preset sets are disjoint.
     assert set(change.DEFAULT_CHANGE_METRICS) & set(data.DEFAULT_DATA_METRICS) == set()
-    assert list(metrics.DEFAULT_METRICS) == [*change.DEFAULT_CHANGE_METRICS]
