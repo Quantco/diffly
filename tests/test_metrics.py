@@ -8,8 +8,10 @@ import polars as pl
 import pytest
 
 from diffly import metrics
+from diffly.comparison import _resolve_metric
 from diffly.metrics import data
-from diffly.metrics.change import ChangeMetricFn
+from diffly.metrics.change import ChangeMetric, ChangeMetricFn
+from diffly.metrics.data import DataMetric
 
 
 @pytest.fixture
@@ -94,3 +96,42 @@ def test_default_metrics_partition() -> None:
 
     # The change and data preset sets are disjoint.
     assert set(change.DEFAULT_CHANGE_METRICS) & set(data.DEFAULT_DATA_METRICS) == set()
+
+
+@pytest.mark.parametrize(
+    "metric",
+    [ChangeMetric(fn=metrics.change.mean), DataMetric(fn=data.null_fraction)],
+)
+def test_resolve_metric_passthrough(metric: Any) -> None:
+    assert _resolve_metric(metric) is metric
+
+
+@pytest.mark.parametrize(
+    "fn, expected",
+    [
+        # One required positional argument → data metric, two → change metric. Optional
+        # parameters do not count towards the arity.
+        (lambda col: col.max(), DataMetric),
+        (lambda left, right: right - left, ChangeMetric),
+        # A closure over a tuning parameter binds it away, so only the columns remain as
+        # required positional arguments: a single-column data metric vs. the
+        # `metrics.change.quantile` factory whose closure takes `(left, right)`.
+        (lambda col, q=0.95: col.quantile(q), DataMetric),
+        (metrics.change.quantile(0.95), ChangeMetric),
+    ],
+)
+def test_resolve_metric_infers_family_from_arity(fn: Any, expected: type) -> None:
+    assert isinstance(_resolve_metric(fn), expected)
+
+
+@pytest.mark.parametrize(
+    "fn",
+    [
+        lambda: pl.lit(0),  # no positional arguments
+        lambda a, b, c: a,  # too many required positional arguments
+        lambda *cols: cols[0],  # variadic
+    ],
+)
+def test_resolve_metric_rejects_ambiguous_signature(fn: Any) -> None:
+    with pytest.raises(ValueError, match="Cannot infer the metric family"):
+        _resolve_metric(fn)

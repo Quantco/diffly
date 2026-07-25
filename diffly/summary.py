@@ -1131,7 +1131,7 @@ def _compute_columns(
                 match_rate=rate,
                 n_total_changes=n_total_changes,
                 changes=changes,
-                change_metrics=change_metrics_by_column.get(col_name) or None,
+                change_metrics=change_metrics_by_column.get(col_name),
             )
         )
     return columns

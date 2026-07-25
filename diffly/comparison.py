@@ -26,14 +26,16 @@ from ._utils import (
     lazy_len,
     make_and_validate_mapping,
 )
-from .metrics._common import Metric
-from .metrics.change import ChangeMetric, ChangeMetricFn
-from .metrics.data import DataMetric, DataMetricFn
+from .metrics._common import Metric, MetricFn
+from .metrics.change import ChangeMetric
+from .metrics.data import DataMetric
 
 if TYPE_CHECKING:  # pragma: no cover
     # NOTE: We cannot import at runtime as we're otherwise running into circular
     #  imports. We're importing again below where we need `Summary` for more than
     #  type annotations.
+    from .metrics.change import ChangeMetricFn
+    from .metrics.data import DataMetricFn
     from .summary import Summary
 
 
@@ -923,7 +925,7 @@ class DataFrameComparison:
         right_name: str = Side.RIGHT,
         slim: bool = False,
         hidden_columns: list[str] | None = None,
-        metrics: Mapping[str, ChangeMetricFn | DataMetricFn | Metric] | None = None,
+        metrics: Mapping[str, MetricFn | Metric] | None = None,
     ) -> Summary:
         """Generate a summary of all aspects of the comparison.
 
@@ -1239,11 +1241,28 @@ def _list_length_exprs(
     return []
 
 
-def _resolve_metric(v: ChangeMetricFn | DataMetricFn | Metric) -> Metric:
-    if isinstance(v, (ChangeMetric, DataMetric)):
+def _resolve_metric(v: MetricFn | Metric) -> Metric:
+    if isinstance(v, Metric):
         return v
-    # Infer the metric family from the callable's arity: a single-argument
-    # callable describes one side (data), two arguments describe a change.
-    if len(inspect.signature(v).parameters) >= 2:
-        return ChangeMetric(fn=cast(ChangeMetricFn, v))
-    return DataMetric(fn=cast(DataMetricFn, v))
+    # Infer the metric family from the number of required positional parameters: a
+    # single-argument callable describes one side (data), two arguments describe a
+    # change. Ambiguous signatures (variadic or a different arity) are rejected so the
+    # user wraps them explicitly in `DataMetric`/`ChangeMetric`.
+    params = inspect.signature(v).parameters.values()
+    required_positional = [
+        p
+        for p in params
+        if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)
+        and p.default is p.empty
+    ]
+    has_variadic = any(p.kind is p.VAR_POSITIONAL for p in params)
+    if has_variadic or len(required_positional) not in (1, 2):
+        raise ValueError(
+            "Cannot infer the metric family from the callable's signature: expected "
+            "exactly one required positional argument (data metric) or two (change "
+            "metric), but got an ambiguous signature. Wrap it explicitly in "
+            "`DataMetric` or `ChangeMetric`."
+        )
+    if len(required_positional) == 2:
+        return ChangeMetric(fn=cast("ChangeMetricFn", v))
+    return DataMetric(fn=cast("DataMetricFn", v))

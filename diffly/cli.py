@@ -12,7 +12,7 @@ from diffly import compare_frames
 
 from ._compat import typer
 from ._utils import ABS_TOL_DEFAULT, ABS_TOL_TEMPORAL_DEFAULT, REL_TOL_DEFAULT
-from .metrics import ALL_METRICS
+from .metrics import DEFAULT_METRICS
 
 app = typer.Typer()
 
@@ -139,8 +139,9 @@ def main(
         list[str],
         typer.Option(
             help=(
-                "Metric presets to display per column. Repeatable. "
-                f"Available: {', '.join(ALL_METRICS)}."
+                "Metric presets to display. Repeatable. Change metrics appear as "
+                "extra columns in the Columns table; data metrics appear in the Data "
+                f"Inspection section. Available: {', '.join(DEFAULT_METRICS)}."
             )
         ),
     ] = [],
@@ -154,11 +155,11 @@ def main(
         hidden_column = [*hidden_column, *hidden_columns]
 
     for name in metric:
-        if name not in ALL_METRICS:
+        if name not in DEFAULT_METRICS:
             raise typer.BadParameter(
-                f"Unknown metric: {name!r}. Available: {', '.join(ALL_METRICS)}."
+                f"Unknown metric: {name!r}. Available: {', '.join(DEFAULT_METRICS)}."
             )
-    metrics = {name: ALL_METRICS[name] for name in metric}
+    metrics = {name: DEFAULT_METRICS[name] for name in metric}
 
     comparison = compare_frames(
         pl.scan_parquet(left),

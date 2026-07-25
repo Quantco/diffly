@@ -53,7 +53,6 @@ def null_fraction(col: pl.Expr) -> pl.Expr:
 DEFAULT_DATA_METRICS: dict[str, DataMetric] = {
     "Null%": DataMetric(
         fn=null_fraction,
-        selector=cs.all(),
         formatter=lambda value: f"{round(value * 100, 2)}%",
         delta_formatter=lambda value: f"{round(value * 100, 2)}",
     ),
