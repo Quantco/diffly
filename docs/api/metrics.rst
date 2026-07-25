@@ -33,7 +33,8 @@ Presets come in two families, each with its own module and default set:
   so you can see how a change affects the data.
 
 The preset default sets are :data:`~diffly.metrics.change.DEFAULT_CHANGE_METRICS`
-and :data:`~diffly.metrics.data.DEFAULT_DATA_METRICS`.
+and :data:`~diffly.metrics.data.DEFAULT_DATA_METRICS`. The union of both families is
+also available as :data:`~diffly.metrics.DEFAULT_METRICS`.
 
 Change metrics
 ==============
