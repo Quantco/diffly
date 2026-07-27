@@ -918,7 +918,7 @@ def _compute_summary_data(
         show_sample_primary_key_per_change,
         change_metrics_by_column,
     )
-    data_inspection = _compute_data_inspection(comp, data_metrics)
+    data_inspection = _compute_data_inspection(comp, data_metrics, hidden_columns)
     sample_rows_left_only, sample_rows_right_only = _compute_sample_rows(
         comp, sample_k_rows_only
     )
@@ -1140,11 +1140,16 @@ def _compute_columns(
 def _compute_data_inspection(
     comp: DataFrameComparison,
     metrics: Mapping[str, DataMetric],
+    hidden_columns: list[str],
 ) -> list[SummaryDataInspectionColumn] | None:
     # NOTE: Data metrics describe each side individually and do not need a join, but we
     # still require the columns to be present on both sides so left/right values are
     # comparable.
-    metric_to_columns = _metric_target_columns(comp, metrics)
+    hidden = set(hidden_columns)
+    metric_to_columns = {
+        label: columns - hidden
+        for label, columns in _metric_target_columns(comp, metrics).items()
+    }
     if not any(metric_to_columns.values()):
         return None
     data_metrics_by_column = _compute_data_metrics(comp, metrics, metric_to_columns)

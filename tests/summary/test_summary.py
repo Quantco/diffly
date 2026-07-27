@@ -13,6 +13,7 @@ import pytest
 
 from diffly import compare_frames, metrics
 from diffly.comparison import DataFrameComparison
+from diffly.metrics._common import Metric, MetricFn
 from diffly.metrics.data import DEFAULT_DATA_METRICS, DataMetric
 from diffly.summary import _format_fraction_as_percentage, to_json_safe
 
@@ -132,48 +133,6 @@ def test_zero_top_k_column_changes_with_show_sample_primary_key() -> None:
         )
 
 
-def test_change_and_data_metrics_routed_to_separate_fields() -> None:
-    # Joined rows id=1,2,3. value deltas (right - left) = [0, 5, null] → Mean = 2.5.
-    # value nulls: left 0/3 = 0%, right 1/3 = 33.33% → Null% = "0.0% -> 33.33% (+33.33)".
-    left = pl.DataFrame({"id": [1, 2, 3], "value": [10.0, 20.0, 30.0]})
-    right = pl.DataFrame({"id": [1, 2, 3], "value": [10.0, 25.0, None]})
-    comp = compare_frames(left, right, primary_key="id")
-
-    summary = comp.summary(
-        metrics={"Mean": metrics.change.mean, "Null%": DEFAULT_DATA_METRICS["Null%"]},
-    )
-    result = json.loads(summary.to_json())
-
-    (value_col,) = result["columns"]
-    assert value_col["name"] == "value"
-    # Change metric lands in the column's `change_metrics`, data metric in the separate
-    # `data_inspection` section.
-    assert value_col["change_metrics"] == {"Mean": pytest.approx(2.5)}
-    assert "data_metrics" not in value_col
-    (value_inspection,) = result["data_inspection"]
-    assert value_inspection["name"] == "value"
-    assert value_inspection["data_metrics"] == {
-        "Null%": {"left": pytest.approx(0.0), "right": pytest.approx(1 / 3)}
-    }
-
-
-def test_data_metrics_consider_unjoined_rows() -> None:
-    # Joined rows are id=1,2,3. The extreme `value`s live in unjoined rows: id=4 is
-    # left-only (999.0) and id=5 is right-only (888.0). A data metric that only looked at
-    # the joined rows would report max 30.0 on both sides, so the metric picking these up
-    # proves it considers values from unjoined rows.
-    left = pl.DataFrame({"id": [1, 2, 3, 4], "value": [10.0, 20.0, 30.0, 999.0]})
-    right = pl.DataFrame({"id": [1, 2, 3, 5], "value": [10.0, 25.0, 30.0, 888.0]})
-    comp = compare_frames(left, right, primary_key="id")
-
-    summary = comp.summary(metrics={"Max": DataMetric(fn=lambda col: col.max())})
-    result = json.loads(summary.to_json())
-
-    (value_inspection,) = result["data_inspection"]
-    assert value_inspection["name"] == "value"
-    assert value_inspection["data_metrics"] == {"Max": {"left": 999.0, "right": 888.0}}
-
-
 def _make_comparison() -> DataFrameComparison:
     # Designed so every parametrized flag affects the expected JSON output:
     # - Same columns in both frames → schemas equal → slim suppresses schemas section
@@ -224,8 +183,16 @@ def test_summary_data_parametrized(
     comp = _make_comparison()
     top_k = 3 if show_top_column_changes else 0
     hidden_columns = ["value"] if hide_value else None
-    metrics_arg = (
-        {"Mean": metrics.change.mean, "Max": metrics.change.max}
+    # Mix change metrics (routed to each column's `change_metrics`) with data metrics
+    # (routed to the separate `data_inspection` section). "Data max" is a data metric so
+    # it sees the whole column, including the unjoined rows id=4/id=5.
+    metrics_arg: dict[str, MetricFn | Metric] | None = (
+        {
+            "Mean": metrics.change.mean,
+            "Max": metrics.change.max,
+            "Null%": DEFAULT_DATA_METRICS["Null%"],
+            "Data max": DataMetric(fn=lambda col: col.max()),
+        }
         if with_metrics
         else None
     )
@@ -292,6 +259,35 @@ def test_summary_data_parametrized(
         )
     expected_columns.append(value_col)
 
+    # Data metrics land in the separate `data_inspection` section. Data metrics look at
+    # the full column, so "Data max" reflects the unjoined rows id=4 (left, 40.0) and id=5
+    # (right, 50.0) rather than the joined-rows max of 30.0. Hidden columns are skipped
+    # entirely, so hiding `value` drops it from the data inspection section too.
+    expected_data_inspection: list[dict] | None = None
+    if with_metrics:
+        expected_data_inspection = [
+            {
+                "name": "status",
+                "data_metrics": {
+                    "Null%": {"left": pytest.approx(0.0), "right": pytest.approx(0.0)},
+                    "Data max": {"left": "d", "right": "e"},
+                },
+            },
+        ]
+        if not hide_value:
+            expected_data_inspection.append(
+                {
+                    "name": "value",
+                    "data_metrics": {
+                        "Null%": {
+                            "left": pytest.approx(0.0),
+                            "right": pytest.approx(0.0),
+                        },
+                        "Data max": {"left": 40.0, "right": 50.0},
+                    },
+                }
+            )
+
     expected = {
         "equal": False,
         "left_name": "left",
@@ -307,8 +303,7 @@ def test_summary_data_parametrized(
             "n_right_only": 1,
         },
         "columns": expected_columns,
-        # Only change metrics are supplied, so the data inspection section is absent.
-        "data_inspection": None,
+        "data_inspection": expected_data_inspection,
         "sample_rows_left_only": [[4]] if sample_rows else None,
         "sample_rows_right_only": [[5]] if sample_rows else None,
     }
