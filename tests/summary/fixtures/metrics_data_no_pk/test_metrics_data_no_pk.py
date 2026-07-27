@@ -31,7 +31,7 @@ def test_generate() -> None:
     comp = compare_frames(left, right)
     generate_summaries(
         comp,
-        metrics={
+        data_metrics={
             "Null%": DEFAULT_DATA_METRICS["Null%"],
             "Distinct": DataMetric(fn=lambda col: col.n_unique()),
             "Max": DataMetric(fn=lambda col: col.max(), selector=cs.string()),

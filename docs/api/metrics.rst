@@ -5,25 +5,26 @@ Metrics
 .. currentmodule:: diffly.metrics
 
 Metrics are scalar aggregations computed per column when generating a
-:meth:`~diffly.comparison.DataFrameComparison.summary`. Pass them via the
-``metrics`` argument as a mapping from display label to a metric. There are two
-families:
+:meth:`~diffly.comparison.DataFrameComparison.summary`. There are two families,
+each passed via its own argument:
 
-- A :class:`~diffly.metrics.change.ChangeMetric` describes the *change* between
-  the two sides. Its callable takes ``(left_expr, right_expr)`` and aggregates over
-  the difference (e.g. the mean delta). It is rendered as a column in the "Columns"
-  table.
-- A :class:`~diffly.metrics.data.DataMetric` describes each dataset *individually*.
-  Its callable takes a single column expression and is evaluated on the left and
-  right side separately (e.g. the fraction of null entries). It is rendered in the
-  "Data Inspection" section, showing the left and right value side by side.
+- A :class:`~diffly.metrics.change.ChangeMetric`, passed via the ``change_metrics``
+  argument, describes the *change* between the two sides. Its callable takes
+  ``(left_expr, right_expr)`` and aggregates over the difference (e.g. the mean
+  delta). It is rendered as a column in the "Columns" table.
+- A :class:`~diffly.metrics.data.DataMetric`, passed via the ``data_metrics``
+  argument, describes each dataset *individually*. Its callable takes a single
+  column expression and is evaluated on the left and right side separately (e.g. the
+  fraction of null entries). It is rendered in the "Data Inspection" section, showing
+  the left and right value side by side.
 
-A bare callable is resolved by its arity: a two-argument callable becomes a
-:class:`~diffly.metrics.change.ChangeMetric` (computed for numerical columns only),
-a one-argument callable becomes a :class:`~diffly.metrics.data.DataMetric`
-(computed for all columns). To target a different set of columns, construct the
-metric explicitly with a column selector, e.g. ``ChangeMetric(fn, selector=cs.all())``
-or ``DataMetric(fn, selector=cs.boolean())``.
+Each argument is a mapping from display label to a metric. A bare callable is
+wrapped in the metric of the corresponding family: ``change_metrics`` callables
+become a :class:`~diffly.metrics.change.ChangeMetric` (computed for numerical
+columns only), ``data_metrics`` callables become a
+:class:`~diffly.metrics.data.DataMetric` (computed for all columns). To target a
+different set of columns, construct the metric explicitly with a column selector,
+e.g. ``ChangeMetric(fn, selector=cs.all())`` or ``DataMetric(fn, selector=cs.boolean())``.
 
 Presets come in two families, each with its own module and default set:
 
@@ -33,8 +34,7 @@ Presets come in two families, each with its own module and default set:
   so you can see how a change affects the data.
 
 The preset default sets are :data:`~diffly.metrics.change.DEFAULT_CHANGE_METRICS`
-and :data:`~diffly.metrics.data.DEFAULT_DATA_METRICS`. The union of both families is
-also available as :data:`~diffly.metrics.DEFAULT_METRICS`.
+and :data:`~diffly.metrics.data.DEFAULT_DATA_METRICS`.
 
 Change metrics
 ==============

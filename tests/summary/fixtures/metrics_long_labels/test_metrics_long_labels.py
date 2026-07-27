@@ -30,7 +30,7 @@ def test_generate() -> None:
     comp = compare_frames(left, right, primary_key=["id"])
     generate_summaries(
         comp,
-        metrics={
+        change_metrics={
             "Mean Delta": metrics.change.mean,
             "Median Delta": metrics.change.median,
             "Minimum Delta": metrics.change.min,

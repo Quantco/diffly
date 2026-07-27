@@ -34,7 +34,7 @@ def test_generate() -> None:
     comp = compare_frames(left, right, primary_key=["id"])
     generate_summaries(
         comp,
-        metrics={
+        change_metrics={
             # Numeric-only preset alongside a metric applied to all columns.
             "Mean": metrics.change.mean,
             # A change metric returning a (non-numeric) string value.
@@ -45,6 +45,15 @@ def test_generate() -> None:
                     .otherwise(pl.lit("down"))
                 ),
             ),
+            # A user-supplied change metric with a custom (string-only) selector.
+            "str_len_delta": ChangeMetric(
+                fn=lambda left, right: (
+                    right.str.len_chars() - left.str.len_chars()
+                ).mean(),
+                selector=cs.string(),
+            ),
+        },
+        data_metrics={
             "Null%": DEFAULT_DATA_METRICS["Null%"],
             # A second, numeric data metric to render more than one data column.
             "Distinct": DataMetric(fn=lambda col: col.n_unique()),
@@ -53,12 +62,5 @@ def test_generate() -> None:
             "Avg": DataMetric(fn=lambda col: col.mean(), selector=cs.numeric()),
             # A non-numeric data metric: rendered as ``left -> right`` without a delta.
             "Max": DataMetric(fn=lambda col: col.max(), selector=cs.string()),
-            # A user-supplied change metric with a custom (string-only) selector.
-            "str_len_delta": ChangeMetric(
-                fn=lambda left, right: (
-                    right.str.len_chars() - left.str.len_chars()
-                ).mean(),
-                selector=cs.string(),
-            ),
         },
     )

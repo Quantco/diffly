@@ -23,7 +23,6 @@ from rich.table import Table
 from rich.text import Text
 
 from ._utils import Side, capitalize_first
-from .metrics._common import Metric
 from .metrics.change import ChangeMetric
 from .metrics.data import DataMetric
 
@@ -63,7 +62,8 @@ class Summary:
         right_name: str,
         slim: bool,
         hidden_columns: list[str] | None,
-        metrics: Mapping[str, Metric] | None,
+        data_metrics: Mapping[str, DataMetric] | None,
+        change_metrics: Mapping[str, ChangeMetric] | None,
     ):
         self.slim = slim
         self._data = _compute_summary_data(
@@ -76,7 +76,8 @@ class Summary:
             right_name=right_name,
             slim=slim,
             hidden_columns=hidden_columns,
-            metrics=metrics,
+            data_metrics=data_metrics,
+            change_metrics=change_metrics,
         )
 
     def format(self, pretty: bool | None = None) -> str:
@@ -829,7 +830,8 @@ def _compute_summary_data(
     right_name: str,
     slim: bool,
     hidden_columns: list[str] | None,
-    metrics: Mapping[str, Metric] | None,
+    data_metrics: Mapping[str, DataMetric] | None,
+    change_metrics: Mapping[str, ChangeMetric] | None,
 ) -> SummaryData:
     from .comparison import DataFrameComparison
 
@@ -898,13 +900,8 @@ def _compute_summary_data(
             _data_metrics={},
         )
 
-    metrics_resolved: dict[str, Metric] = dict(metrics or {})
-    change_metrics = {
-        label: m for label, m in metrics_resolved.items() if isinstance(m, ChangeMetric)
-    }
-    data_metrics = {
-        label: m for label, m in metrics_resolved.items() if isinstance(m, DataMetric)
-    }
+    change_metrics = dict(change_metrics or {})
+    data_metrics = dict(data_metrics or {})
     change_metrics_by_column = _compute_change_metrics(comp, change_metrics)
     change_metric_labels = list(change_metrics)
 
@@ -1010,7 +1007,7 @@ def _select_metric_columns(
 
 
 def _metric_target_columns(
-    comp: DataFrameComparison, metrics: Mapping[str, Metric]
+    comp: DataFrameComparison, metrics: Mapping[str, ChangeMetric | DataMetric]
 ) -> dict[str, set[str]]:
     """Map each metric label to the columns it applies to."""
     return {

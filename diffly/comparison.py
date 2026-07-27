@@ -4,11 +4,10 @@
 from __future__ import annotations
 
 import datetime as dt
-import inspect
 import warnings
 from collections.abc import Iterable, Mapping, Sequence
 from functools import cached_property
-from typing import TYPE_CHECKING, Literal, Self, cast, overload
+from typing import TYPE_CHECKING, Literal, Self, overload
 
 import polars as pl
 from polars.schema import Schema as PolarsSchema
@@ -26,16 +25,13 @@ from ._utils import (
     lazy_len,
     make_and_validate_mapping,
 )
-from .metrics._common import Metric, MetricFn
-from .metrics.change import ChangeMetric
-from .metrics.data import DataMetric
+from .metrics.change import ChangeMetric, ChangeMetricFn
+from .metrics.data import DataMetric, DataMetricFn
 
 if TYPE_CHECKING:  # pragma: no cover
     # NOTE: We cannot import at runtime as we're otherwise running into circular
     #  imports. We're importing again below where we need `Summary` for more than
     #  type annotations.
-    from .metrics.change import ChangeMetricFn
-    from .metrics.data import DataMetricFn
     from .summary import Summary
 
 
@@ -925,7 +921,8 @@ class DataFrameComparison:
         right_name: str = Side.RIGHT,
         slim: bool = False,
         hidden_columns: list[str] | None = None,
-        metrics: Mapping[str, MetricFn | Metric] | None = None,
+        data_metrics: Mapping[str, DataMetricFn | DataMetric] | None = None,
+        change_metrics: Mapping[str, ChangeMetricFn | ChangeMetric] | None = None,
     ) -> Summary:
         """Generate a summary of all aspects of the comparison.
 
@@ -955,16 +952,26 @@ class DataFrameComparison:
                 advanced users who are familiar with the summary format.
             hidden_columns: Columns for which no values are printed, e.g. because they
                 contain sensitive information.
-            metrics: Optional mapping from display label to a metric. A value may be a
-                :class:`~diffly.metrics.change.ChangeMetric`, a
-                :class:`~diffly.metrics.data.DataMetric`, or a bare callable resolved
-                by its arity (two arguments → change metric on numerical columns, one
-                argument → data metric on all columns). To target other column types,
-                construct the metric explicitly with a column selector
-                (e.g. ``ChangeMetric(fn, selector=cs.numeric())``). See :doc:`/api/metrics`
-                for the full list of presets. When ``None`` (default), no metrics are
-                computed; presets are not applied automatically. Prefer short labels —
-                the summary has a fixed width and many or long labels degrade rendering.
+            data_metrics: Optional mapping from display label to a data metric,
+                describing each dataset individually and rendered in the "Data
+                Inspection" section. A value may be a
+                :class:`~diffly.metrics.data.DataMetric` or a bare callable taking a
+                single column expression, which is wrapped in a
+                :class:`~diffly.metrics.data.DataMetric` applying to all columns. To
+                target other column types, construct the metric explicitly with a
+                column selector (e.g. ``DataMetric(fn, selector=cs.numeric())``).
+            change_metrics: Optional mapping from display label to a change metric,
+                quantifying the change between the two sides and rendered as extra
+                columns in the "Columns" table. A value may be a
+                :class:`~diffly.metrics.change.ChangeMetric` or a bare callable taking a
+                pair of column expressions, which is wrapped in a
+                :class:`~diffly.metrics.change.ChangeMetric` applying to numerical
+                columns. To target other column types, construct the metric explicitly
+                with a column selector (e.g. ``ChangeMetric(fn, selector=cs.numeric())``).
+                See :doc:`/api/metrics` for the full list of presets. When ``None``
+                (default), no metrics are computed; presets are not applied
+                automatically. Prefer short labels — the summary has a fixed width and
+                many or long labels degrade rendering.
 
         Returns:
             A summary which can be printed or written to a file.
@@ -980,9 +987,14 @@ class DataFrameComparison:
         # NOTE: We're importing here to prevent circular imports
         from .summary import Summary
 
-        resolved_metrics = (
-            {label: _resolve_metric(v) for label, v in metrics.items()}
-            if metrics is not None
+        resolved_data_metrics = (
+            {label: _resolve_data_metric(v) for label, v in data_metrics.items()}
+            if data_metrics is not None
+            else None
+        )
+        resolved_change_metrics = (
+            {label: _resolve_change_metric(v) for label, v in change_metrics.items()}
+            if change_metrics is not None
             else None
         )
 
@@ -996,7 +1008,8 @@ class DataFrameComparison:
             right_name=right_name,
             slim=slim,
             hidden_columns=hidden_columns,
-            metrics=resolved_metrics,
+            data_metrics=resolved_data_metrics,
+            change_metrics=resolved_change_metrics,
         )
 
     # ----------------------------------- UTILITIES ----------------------------------- #
@@ -1241,28 +1254,9 @@ def _list_length_exprs(
     return []
 
 
-def _resolve_metric(v: MetricFn | Metric) -> Metric:
-    if isinstance(v, Metric):
-        return v
-    # Infer the metric family from the number of required positional parameters: a
-    # single-argument callable describes one side (data), two arguments describe a
-    # change. Ambiguous signatures (variadic or a different arity) are rejected so the
-    # user wraps them explicitly in `DataMetric`/`ChangeMetric`.
-    params = inspect.signature(v).parameters.values()
-    required_positional = [
-        p
-        for p in params
-        if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)
-        and p.default is p.empty
-    ]
-    has_variadic = any(p.kind is p.VAR_POSITIONAL for p in params)
-    if has_variadic or len(required_positional) not in (1, 2):
-        raise ValueError(
-            "Cannot infer the metric family from the callable's signature: expected "
-            "exactly one required positional argument (data metric) or two (change "
-            "metric), but got an ambiguous signature. Wrap it explicitly in "
-            "`DataMetric` or `ChangeMetric`."
-        )
-    if len(required_positional) == 2:
-        return ChangeMetric(fn=cast("ChangeMetricFn", v))
-    return DataMetric(fn=cast("DataMetricFn", v))
+def _resolve_data_metric(v: DataMetricFn | DataMetric) -> DataMetric:
+    return v if isinstance(v, DataMetric) else DataMetric(fn=v)
+
+
+def _resolve_change_metric(v: ChangeMetricFn | ChangeMetric) -> ChangeMetric:
+    return v if isinstance(v, ChangeMetric) else ChangeMetric(fn=v)

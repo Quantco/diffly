@@ -29,7 +29,7 @@ def test_generate() -> None:
     comp = compare_frames(left, right, primary_key=["id"])
     generate_summaries(
         comp,
-        metrics={
+        change_metrics={
             "mean_delta": metrics.change.mean,
             "p95_delta": metrics.change.quantile(0.95),
             "max_abs_delta": lambda left, right: (right - left).abs().max(),

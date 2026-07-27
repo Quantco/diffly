@@ -13,8 +13,8 @@ import pytest
 
 from diffly import compare_frames, metrics
 from diffly.comparison import DataFrameComparison
-from diffly.metrics._common import Metric, MetricFn
-from diffly.metrics.data import DEFAULT_DATA_METRICS, DataMetric
+from diffly.metrics.change import ChangeMetric, ChangeMetricFn
+from diffly.metrics.data import DEFAULT_DATA_METRICS, DataMetric, DataMetricFn
 from diffly.summary import _format_fraction_as_percentage, to_json_safe
 
 
@@ -186,10 +186,13 @@ def test_summary_data_parametrized(
     # Mix change metrics (routed to each column's `change_metrics`) with data metrics
     # (routed to the separate `data_inspection` section). "Data max" is a data metric so
     # it sees the whole column, including the unjoined rows id=4/id=5.
-    metrics_arg: dict[str, MetricFn | Metric] | None = (
+    change_metrics_arg: dict[str, ChangeMetricFn | ChangeMetric] | None = (
+        {"Mean": metrics.change.mean, "Max": metrics.change.max}
+        if with_metrics
+        else None
+    )
+    data_metrics_arg: dict[str, DataMetricFn | DataMetric] | None = (
         {
-            "Mean": metrics.change.mean,
-            "Max": metrics.change.max,
             "Null%": DEFAULT_DATA_METRICS["Null%"],
             "Data max": DataMetric(fn=lambda col: col.max()),
         }
@@ -203,7 +206,8 @@ def test_summary_data_parametrized(
         show_sample_primary_key_per_change=sample_pk,
         slim=slim,
         hidden_columns=hidden_columns,
-        metrics=metrics_arg,
+        data_metrics=data_metrics_arg,
+        change_metrics=change_metrics_arg,
     )
     result = json.loads(summary.to_json())
 
