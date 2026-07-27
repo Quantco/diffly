@@ -101,7 +101,7 @@ def test_cli_unknown_metric(tmp_path: Path) -> None:
     assert "Unknown metric" in result.output
 
 
-@pytest.mark.parametrize("metric_name", ["Mean", "Null%"])
+@pytest.mark.parametrize("metric_name", ["Mean diff", "Null%"])
 def test_cli_metric_from_both_defaults(tmp_path: Path, metric_name: str) -> None:
     # Both change ("mean") and data ("Null%") presets are selectable via --metric.
     left = pl.DataFrame({"id": [1, 2], "x": [1.0, None]})
