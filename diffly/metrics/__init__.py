@@ -5,7 +5,7 @@
 Two families are provided:
 
 - :class:`~diffly.metrics.change.ChangeMetric`s in :mod:`~diffly.metrics.change` describe the change between
-  numeric columns itself by aggregating over ``right - left``.
+  columns itself by aggregating over a combination of the columns (e.g., ``right - left``).
 - :class:`~diffly.metrics.data.DataMetric`s in :mod:`~diffly.metrics.data` describe the left and right
   datasets individually, explaining how a change affects the data.
 """
