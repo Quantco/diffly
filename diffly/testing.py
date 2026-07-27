@@ -18,8 +18,21 @@ from diffly._utils import (
 from diffly.summary import WIDTH
 
 from ._compat import dy
+from ._exceptions import ComparisonAssertionError
 from .comparison import DataFrameComparison, compare_frames
 from .metrics import Metric, MetricFn
+
+_DEBUG_HINT_FRAME = (
+    "To debug interactively (e.g. with `pytest --pdb`), access the comparison via "
+    "`$_exception.comparison` at the debugger prompt or via the `.comparison` "
+    "attribute of this error."
+)
+_DEBUG_HINT_COLLECTION = (
+    "To debug interactively (e.g. with `pytest --pdb`), access the failing member "
+    "comparisons via `$_exception.comparisons` (a mapping from member name to "
+    "comparison) at the debugger prompt or via the `.comparisons` attribute of this "
+    "error."
+)
 
 
 def assert_collection_equal(
@@ -92,7 +105,12 @@ def assert_collection_equal(
             metrics are computed; presets are not applied automatically.
 
     Raises:
-        AssertionError: If the collections are not equal.
+        ComparisonAssertionError: If the collections are not equal. This is a subclass
+            of :class:`AssertionError` that additionally exposes the failing member
+            comparisons via its ``.comparisons`` attribute (a mapping from member name
+            to :class:`~diffly.comparison.DataFrameComparison`). When running with
+            ``pytest --pdb``, access them at the debugger prompt via
+            ``$_exception.comparisons``.
 
     Examples:
         >>> import dataframely as dy
@@ -154,7 +172,10 @@ def assert_collection_equal(
             ),
             " " * 2,
         )
-        raise AssertionError(f"The following members are not equal:\n\n{text}")
+        raise ComparisonAssertionError(
+            f"The following members are not equal:\n\n{text}\n\n{_DEBUG_HINT_COLLECTION}",
+            comparisons=failed_member_comparisons,
+        )
 
 
 def assert_frame_equal(
@@ -235,7 +256,12 @@ def assert_frame_equal(
             metrics are computed; presets are not applied automatically.
 
     Raises:
-        AssertionError: If the data frames are not equal.
+        ComparisonAssertionError: If the data frames are not equal. This is a subclass
+            of :class:`AssertionError` that additionally exposes the underlying
+            :class:`~diffly.comparison.DataFrameComparison` via its ``.comparison``
+            attribute. When running with ``pytest --pdb``, access it at the debugger
+            prompt via ``$_exception.comparison`` to explore the differences
+            interactively.
 
     Note:
         Contrary to :meth:`polars.testing.assert_frame_equal`, the data frames ``left``
@@ -281,7 +307,10 @@ def assert_frame_equal(
             metrics=metrics,
         )
         text = textwrap.indent(str(summary), " " * 2)
-        raise AssertionError(f"Data frames are not equal:\n\n{text}")
+        raise ComparisonAssertionError(
+            f"Data frames are not equal:\n\n{text}\n\n{_DEBUG_HINT_FRAME}",
+            comparison=comparison,
+        )
 
 
 def _get_heading(title: str) -> str:

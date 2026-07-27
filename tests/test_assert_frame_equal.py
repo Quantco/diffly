@@ -6,7 +6,8 @@ import textwrap
 import polars as pl
 import pytest
 
-from diffly import compare_frames
+from diffly import ComparisonAssertionError, compare_frames
+from diffly.comparison import DataFrameComparison
 from diffly.testing import assert_frame_equal
 
 
@@ -60,3 +61,18 @@ def test_success_with_nan() -> None:
     df = pl.DataFrame({"id": [1, 2], "value": [1.0, float("nan")]})
     assert_frame_equal(df, df)
     assert_frame_equal(df, df, primary_key="id")
+
+
+def test_error_exposes_comparison() -> None:
+    left = pl.DataFrame({"id": [1, 2], "value": [10.0, 20.0]})
+    right = pl.DataFrame({"id": [1, 2], "value": [10.0, 25.0]})
+    with pytest.raises(ComparisonAssertionError) as exc_info:
+        assert_frame_equal(left, right, primary_key="id")
+
+    # A subclass of `AssertionError` for backward compatibility.
+    assert isinstance(exc_info.value, AssertionError)
+    comparison = exc_info.value.comparison
+    assert isinstance(comparison, DataFrameComparison)
+    # The comparison is fully initialized and usable for interactive debugging.
+    assert comparison.fraction_same("value") == 0.5
+    assert exc_info.value.comparisons == {}

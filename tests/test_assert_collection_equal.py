@@ -4,6 +4,8 @@
 import polars as pl
 import pytest
 
+from diffly import ComparisonAssertionError
+from diffly.comparison import DataFrameComparison
 from diffly.testing import assert_collection_equal
 
 pytest.importorskip("dataframely", reason="requires dataframely")
@@ -118,6 +120,40 @@ def test_unequal_members() -> None:
     )
     with pytest.raises(AssertionError, match="The following members are not equal"):
         assert_collection_equal(qux1, qux2)
+
+
+def test_error_exposes_comparisons() -> None:
+    qux1 = Qux.validate(
+        {
+            "foo": Foo.validate(
+                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 3.0]}), cast=True
+            ),
+            "bar": Bar.validate(
+                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 3.0]}), cast=True
+            ),
+        }
+    )
+    qux2 = Qux.validate(
+        {
+            "foo": Foo.validate(
+                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 4.0]}), cast=True
+            ),
+            "bar": Bar.validate(
+                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 3.0]}), cast=True
+            ),
+        }
+    )
+    with pytest.raises(ComparisonAssertionError) as exc_info:
+        assert_collection_equal(qux1, qux2)
+
+    # A subclass of `AssertionError` for backward compatibility.
+    assert isinstance(exc_info.value, AssertionError)
+    assert exc_info.value.comparison is None
+    # Only the failing member is exposed, and its comparison is usable.
+    comparisons = exc_info.value.comparisons
+    assert set(comparisons) == {"foo"}
+    assert isinstance(comparisons["foo"], DataFrameComparison)
+    assert comparisons["foo"].fraction_same("value") == pytest.approx(2 / 3)
 
 
 def test_no_primary_key() -> None:
