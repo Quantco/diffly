@@ -12,17 +12,10 @@ from diffly import compare_frames
 
 from ._compat import typer
 from ._utils import ABS_TOL_DEFAULT, ABS_TOL_TEMPORAL_DEFAULT, REL_TOL_DEFAULT
-from .metrics import Metric, MetricFn
 from .metrics.change import DEFAULT_CHANGE_METRICS
 from .metrics.data import DEFAULT_DATA_METRICS
 
 app = typer.Typer()
-
-#: All metric presets selectable via ``--metric``, combining the change and data sets.
-AVAILABLE_METRICS: dict[str, MetricFn | Metric] = {
-    **DEFAULT_CHANGE_METRICS,
-    **DEFAULT_DATA_METRICS,
-}
 
 
 @app.command()
@@ -143,12 +136,21 @@ def main(
         list[str],
         typer.Option(hidden=True),
     ] = [],
-    metric: Annotated[
+    data_metric: Annotated[
         list[str],
         typer.Option(
             help=(
-                "Metric presets to display per column. Repeatable. "
-                f"Available: {', '.join(AVAILABLE_METRICS)}."
+                "Data metric presets to display in the Data Inspection section. "
+                f"Repeatable. Available: {', '.join(DEFAULT_DATA_METRICS)}."
+            )
+        ),
+    ] = [],
+    change_metric: Annotated[
+        list[str],
+        typer.Option(
+            help=(
+                "Change metric presets to display as extra columns in the Columns "
+                f"table. Repeatable. Available: {', '.join(DEFAULT_CHANGE_METRICS)}."
             )
         ),
     ] = [],
@@ -161,12 +163,20 @@ def main(
         )
         hidden_column = [*hidden_column, *hidden_columns]
 
-    for name in metric:
-        if name not in AVAILABLE_METRICS:
+    for name in data_metric:
+        if name not in DEFAULT_DATA_METRICS:
             raise typer.BadParameter(
-                f"Unknown metric: {name!r}. Available: {', '.join(AVAILABLE_METRICS)}."
+                f"Unknown data metric: {name!r}. "
+                f"Available: {', '.join(DEFAULT_DATA_METRICS)}."
             )
-    metrics = {name: AVAILABLE_METRICS[name] for name in metric}
+    for name in change_metric:
+        if name not in DEFAULT_CHANGE_METRICS:
+            raise typer.BadParameter(
+                f"Unknown change metric: {name!r}. "
+                f"Available: {', '.join(DEFAULT_CHANGE_METRICS)}."
+            )
+    data_metrics = {name: DEFAULT_DATA_METRICS[name] for name in data_metric}
+    change_metrics = {name: DEFAULT_CHANGE_METRICS[name] for name in change_metric}
 
     comparison = compare_frames(
         pl.scan_parquet(left),
@@ -185,7 +195,8 @@ def main(
         right_name=right_name,
         slim=slim,
         hidden_columns=hidden_column,
-        metrics=metrics,
+        data_metrics=data_metrics,
+        change_metrics=change_metrics,
     )
     if output_json:
         typer.echo(summary.to_json())

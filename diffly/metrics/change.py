@@ -1,21 +1,37 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Metrics describing the change between numeric columns.
-
-These aggregate over ``right - left`` to characterize the change itself.
-"""
-
 from __future__ import annotations
+
+from collections.abc import Callable
+from dataclasses import dataclass, field
 
 import polars as pl
 import polars.selectors as cs
 
-from ._common import Metric, MetricFn
+ChangeMetricFn = Callable[[pl.Expr, pl.Expr], pl.Expr]
+"""A `ChangeMetricFn` maps a pair of column expressions to a scalar aggregation
+expression."""
 
 
-def _make_numeric_metric(fn: MetricFn) -> Metric:
-    return Metric(fn=fn, selector=cs.numeric())
+@dataclass(frozen=True)
+class ChangeMetric:
+    """A metric quantifying the *change* in a column between the two sides of a
+    comparison.
+
+    Change metrics are rendered as extra columns in the "Columns" table, alongside the
+    match rate.
+    """
+
+    fn: ChangeMetricFn
+    """Aggregates over ``right - left`` (e.g. the mean delta) to describe the change
+    itself."""
+
+    selector: cs.Selector = field(default_factory=cs.numeric)
+    """Selects the columns the metric applies to; defaults to numeric columns."""
+
+
+# ---------------------------------- CHANGE METRICS ---------------------------------- #
 
 
 def mean(left: pl.Expr, right: pl.Expr) -> pl.Expr:
@@ -54,7 +70,7 @@ def mean_relative_deviation(left: pl.Expr, right: pl.Expr) -> pl.Expr:
     return ((right - left) / left).abs().mean()
 
 
-def quantile(q: float) -> MetricFn:
+def quantile(q: float) -> ChangeMetricFn:
     """Factory returning a metric that computes the ``q``-quantile of
     ``right - left``."""
     if not 0 <= q <= 1:
@@ -66,13 +82,13 @@ def quantile(q: float) -> MetricFn:
     return _quantile
 
 
-DEFAULT_CHANGE_METRICS: dict[str, MetricFn] = {
-    "Mean": mean,
-    "Median": median,
-    "Min": min,
-    "Max": max,
-    "Std": std,
-    "Mean absolute deviation": mean_absolute_deviation,
-    "Mean relative deviation": mean_relative_deviation,
+DEFAULT_CHANGE_METRICS: dict[str, ChangeMetric] = {
+    "Mean diff": ChangeMetric(fn=mean),
+    "Median diff": ChangeMetric(fn=median),
+    "Min diff": ChangeMetric(fn=min),
+    "Max diff": ChangeMetric(fn=max),
+    "Std diff": ChangeMetric(fn=std),
+    "Mean absolute diff": ChangeMetric(fn=mean_absolute_deviation),
+    "Mean relative diff": ChangeMetric(fn=mean_relative_deviation),
 }
 """Preset metrics describing the change between numeric columns."""

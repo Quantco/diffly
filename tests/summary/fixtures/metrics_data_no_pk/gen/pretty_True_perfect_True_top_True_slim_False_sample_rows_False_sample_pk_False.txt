@@ -1,0 +1,23 @@
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ [1m                                    Diffly Summary                                    [0m ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+   [3mAttention: the data frames do not match exactly, but as no primary key columns are [0m
+   [3mprovided, the row and column matches cannot be computed.[0m
+
+ [1mSchemas[0m
+ ▔▔▔▔▔▔▔
+   [3mSchemas match exactly (column count: 3).[0m
+
+ [1mRows[0m
+ ▔▔▔▔
+   [3mThe number of rows matches exactly (row count: 5).[0m
+
+ [1mData Inspection[0m
+ ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+   ┏━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━┓
+   ┃[1m [0m[1mColumn[0m[1m [0m┃[1m [0m[1m                Null%[0m[1m [0m┃[1m [0m[1m   Distinct[0m[1m [0m┃[1m [0m[1m   Max[0m[1m [0m┃
+   ┡━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━┩
+   │ [36mid    [0m │   [33m0.0% -> 0.0% (+0.0)[0m │ [33m5 -> 5 (+0)[0m │        │
+   │ [36mprice [0m │ [33m20.0% -> 0.0% (-20.0)[0m │ [33m5 -> 5 (+0)[0m │        │
+   │ [36mstatus[0m │ [33m0.0% -> 40.0% (+40.0)[0m │ [33m5 -> 4 (-1)[0m │ [33me -> x[0m │
+   └────────┴───────────────────────┴─────────────┴────────┘

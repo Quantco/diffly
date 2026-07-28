@@ -80,7 +80,19 @@ def test_cli_hidden_columns_alias_warns(tmp_path: Path) -> None:
     assert result.exit_code == 0
 
 
-def test_cli_unknown_metric(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "flag, name, expected",
+    [
+        ("--change-metric", "bogus", "Unknown change metric"),
+        ("--data-metric", "bogus", "Unknown data metric"),
+        # A valid preset from the wrong family is rejected by the family-specific flag.
+        ("--change-metric", "Null%", "Unknown change metric"),
+        ("--data-metric", "Mean diff", "Unknown data metric"),
+    ],
+)
+def test_cli_unknown_metric(
+    tmp_path: Path, flag: str, name: str, expected: str
+) -> None:
     left = pl.DataFrame({"id": [1, 2], "x": [1.0, 2.0]})
     right = pl.DataFrame({"id": [1, 2], "x": [1.0, 3.0]})
     left.write_parquet(tmp_path / "left.parquet")
@@ -93,17 +105,21 @@ def test_cli_unknown_metric(tmp_path: Path) -> None:
             str(tmp_path / "right.parquet"),
             "--primary-key",
             "id",
-            "--metric",
-            "bogus",
+            flag,
+            name,
         ],
     )
     assert result.exit_code != 0
-    assert "Unknown metric" in result.output
+    assert expected in result.output
 
 
-@pytest.mark.parametrize("metric_name", ["Mean", "Null%"])
-def test_cli_metric_from_both_defaults(tmp_path: Path, metric_name: str) -> None:
-    # Both change ("mean") and data ("Null%") presets are selectable via --metric.
+@pytest.mark.parametrize(
+    "flag, metric_name", [("--change-metric", "Mean diff"), ("--data-metric", "Null%")]
+)
+def test_cli_metric_from_both_defaults(
+    tmp_path: Path, flag: str, metric_name: str
+) -> None:
+    # Change presets are selectable via --change-metric, data presets via --data-metric.
     left = pl.DataFrame({"id": [1, 2], "x": [1.0, None]})
     right = pl.DataFrame({"id": [1, 2], "x": [1.0, 3.0]})
     left.write_parquet(tmp_path / "left.parquet")
@@ -116,7 +132,7 @@ def test_cli_metric_from_both_defaults(tmp_path: Path, metric_name: str) -> None
             str(tmp_path / "right.parquet"),
             "--primary-key",
             "id",
-            "--metric",
+            flag,
             metric_name,
         ],
     )

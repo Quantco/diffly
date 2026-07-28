@@ -49,7 +49,7 @@ build-wheel = "python -m build --no-isolation ."
 check-wheel = "twine check dist/*"
 
 [feature.lint.dependencies]
-docformatter = "*"
+docformatter = "<1.7.8"
 insert-license-header = "*"
 pre-commit = "*"
 pre-commit-hooks = "*"
