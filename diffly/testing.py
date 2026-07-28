@@ -151,12 +151,7 @@ def assert_collection_equal(
             metrics are computed; presets are not applied automatically.
 
     Raises:
-        CollectionComparisonAssertionError: If the collections are not equal. This is a
-            subclass of :class:`AssertionError` that additionally exposes the failing
-            member comparisons via its ``.comparisons`` attribute (a mapping from member
-            name to :class:`~diffly.comparison.DataFrameComparison`). When running with
-            ``pytest --pdb``, access them at the debugger prompt via
-            ``$_exception.comparisons``.
+        CollectionComparisonAssertionError: If the collections are not equal.
 
     Examples:
         >>> import dataframely as dy
@@ -302,12 +297,7 @@ def assert_frame_equal(
             metrics are computed; presets are not applied automatically.
 
     Raises:
-        FrameComparisonAssertionError: If the data frames are not equal. This is a
-            subclass of :class:`AssertionError` that additionally exposes the underlying
-            :class:`~diffly.comparison.DataFrameComparison` via its ``.comparison``
-            attribute. When running with ``pytest --pdb``, access it at the debugger
-            prompt via ``$_exception.comparison`` to explore the differences
-            interactively.
+        FrameComparisonAssertionError: If the data frames are not equal.
 
     Note:
         Contrary to :meth:`polars.testing.assert_frame_equal`, the data frames ``left``
