@@ -960,6 +960,10 @@ class DataFrameComparison:
                 :class:`~diffly.metrics.data.DataMetric` applying to all columns. To
                 target other column types, construct the metric explicitly with a
                 column selector (e.g. ``DataMetric(fn, selector=cs.numeric())``).
+                See :doc:`/api/metrics` for the full list of presets. When ``None``
+                (default), no metrics are computed; presets are not applied
+                automatically. Prefer short labels — the summary has a fixed width and
+                many or long labels degrade rendering.
             change_metrics: Optional mapping from display label to a change metric,
                 quantifying the change between the two sides and rendered as extra
                 columns in the "Columns" table. A value may be a
