@@ -95,7 +95,7 @@ def test_default_metrics_partition() -> None:
     from diffly.metrics import change
 
     # The change and data preset sets are disjoint.
-    assert set(change.DEFAULT_CHANGE_METRICS) & set(data.DEFAULT_DATA_METRICS) == set()
+    assert set(change.DEFAULT_CHANGE_METRICS).isdisjoint(set(data.DEFAULT_DATA_METRICS))
 
 
 def test_resolve_data_metric_passthrough() -> None:
