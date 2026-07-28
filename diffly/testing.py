@@ -32,7 +32,8 @@ class FrameComparisonAssertionError(ComparisonAssertionError):
     """Raised when :func:`assert_frame_equal` fails.
 
     Access the underlying comparison from the exception using ``e.comparison``
-    or in a post-mortem debugger via::
+    or in a post-mortem debugger via the ``$_exception`` convenience variable
+    (requires Python >= 3.12)::
 
         (Pdb) cmp = $_exception.comparison
         (Pdb) cmp.joined_unequal()
@@ -50,7 +51,8 @@ class CollectionComparisonAssertionError(ComparisonAssertionError):
     """Raised when :func:`assert_collection_equal` fails.
 
     Access the failing member comparisons from the exception using ``e.comparisons``
-    or from a post-mortem debugger via::
+    or from a post-mortem debugger via the ``$_exception`` convenience variable
+    (requires Python >= 3.12)::
 
         (Pdb) cmps = $_exception.comparisons
         (Pdb) cmps["some_member"].joined_unequal()
@@ -70,14 +72,14 @@ class CollectionComparisonAssertionError(ComparisonAssertionError):
 
 _DEBUG_HINT_FRAME = (
     "To debug interactively (e.g. with `pytest --pdb`), access the comparison via "
-    "`$_exception.comparison` at the debugger prompt or via the `.comparison` "
-    "attribute of this error."
+    "`$_exception.comparison` at the debugger prompt (requires Python >= 3.12) or via "
+    "the `.comparison` attribute of this error."
 )
 _DEBUG_HINT_COLLECTION = (
     "To debug interactively (e.g. with `pytest --pdb`), access the failing member "
     "comparisons via `$_exception.comparisons` (a mapping from member name to "
-    "comparison) at the debugger prompt or via the `.comparisons` attribute of this "
-    "error."
+    "comparison) at the debugger prompt (requires Python >= 3.12) or via the "
+    "`.comparisons` attribute of this error."
 )
 
 
