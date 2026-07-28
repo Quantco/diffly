@@ -26,13 +26,6 @@ columns only), ``data_metrics`` callables become a
 different set of columns, construct the metric explicitly with a column selector,
 e.g. ``ChangeMetric(fn, selector=cs.all())`` or ``DataMetric(fn, selector=cs.boolean())``.
 
-Presets come in two families, each with its own module and default set:
-
-- :mod:`diffly.metrics.change` describes the *change* between numeric columns by
-  aggregating over ``right - left``.
-- :mod:`diffly.metrics.data` describes the left and right datasets *individually*,
-  so you can see how a change affects the data.
-
 The preset default sets are :data:`~diffly.metrics.change.DEFAULT_CHANGE_METRICS`
 and :data:`~diffly.metrics.data.DEFAULT_DATA_METRICS`.
 
