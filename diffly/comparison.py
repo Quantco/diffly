@@ -929,7 +929,9 @@ class DataFrameComparison:
         Args:
             show_perfect_column_matches: Whether to include column matches in the
                 summary even if the column match rate is 100%. Setting this to ``False``
-                is useful when comparing very wide data frames.
+                is useful when comparing very wide data frames. This also applies to the
+                "Data Inspection" section: columns for which all data metrics are
+                unchanged between the two sides are omitted.
             top_k_column_changes: The maximum number of column values changes to
                 display for columns with a match rate below 100% in the summary. When
                 enabling this feature, make sure that no sensitive data is leaked.
