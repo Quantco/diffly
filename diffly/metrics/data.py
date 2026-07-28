@@ -1,121 +1,60 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Metrics describing the left and right datasets individually.
-
-These characterize each side of a change so you can understand how the change affects
-the data, rather than describing the change itself.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass, field
+from typing import Any
 
 import polars as pl
 import polars.selectors as cs
 
-from ._common import Metric, MetricFn
+DataMetricFn = Callable[[pl.Expr], pl.Expr]
+"""A data metric maps a single column expression to a scalar aggregation expression."""
 
 
-def null_fraction_data(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Change in the fraction of null entries, rendered as ``<old> -> <new> (<delta>)``.
+@dataclass(frozen=True)
+class DataMetric:
+    """A metric describing each dataset *individually*.
 
-    ``old`` and ``new`` are the null percentages of the left and right side, and
-    ``delta`` is their signed difference (``+`` when the right side has proportionally
-    more nulls, ``-`` when it has fewer). This metric function can be applied to columns
-    of any type.
+    Data metrics are rendered in a dedicated "Data Inspection" section, showing the left
+    and right value side by side, followed by their signed delta for numeric values.
     """
-    return _render_change(
-        left.is_null().mean(),
-        right.is_null().mean(),
-        lambda value, signed: _percentage_string(
-            value, signed=signed, percent_sign=not signed
-        ),
-    )
+
+    fn: DataMetricFn
+    """Applied to the left and right side separately, characterizing the data rather
+    than the change between the sides."""
+
+    selector: cs.Selector = field(default_factory=cs.all)
+    """Selects the columns the metric applies to; defaults to all columns."""
+
+    formatter: Callable[[Any], str] | None = None
+    """Formats a single left/right value for display.
+
+    Falls back to the default numeric precision when unset.
+    """
+
+    delta_formatter: Callable[[Any], str] | None = None
+    """Formats the magnitude of the delta, which is rendered with an explicit sign.
+
+    Falls back to ``formatter`` when ``None``.
+    """
 
 
-def mean_data(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Change in the mean, rendered as ``<old mean> -> <new mean> (<delta>)``."""
-    return _render_numeric_change(left.mean(), right.mean())
+# ----------------------------------- DATA METRICS ----------------------------------- #
 
 
-def median_data(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Change in the median, rendered as ``<old median> -> <new median> (<delta>)``."""
-    return _render_numeric_change(left.median(), right.median())
+def null_fraction(col: pl.Expr) -> pl.Expr:
+    """Fraction of null entries in a column."""
+    return col.is_null().mean()
 
 
-def min_data(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Change in the minimum, rendered as ``<old min> -> <new min> (<delta>)``."""
-    return _render_numeric_change(left.min(), right.min())
-
-
-def max_data(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Change in the maximum, rendered as ``<old max> -> <new max> (<delta>)``."""
-    return _render_numeric_change(left.max(), right.max())
-
-
-def std_data(left: pl.Expr, right: pl.Expr) -> pl.Expr:
-    """Change in the standard deviation, rendered as ``<old std> -> <new std>
-    (<delta>)``."""
-    return _render_numeric_change(left.std(), right.std())
-
-
-DEFAULT_DATA_METRICS: dict[str, MetricFn | Metric] = {
-    "Null% (data)": Metric(fn=null_fraction_data, selector=cs.all()),
-    "Mean (data)": Metric(fn=mean_data, selector=cs.numeric()),
-    "Median (data)": Metric(fn=median_data, selector=cs.numeric()),
-    "Min (data)": Metric(fn=min_data, selector=cs.numeric()),
-    "Max (data)": Metric(fn=max_data, selector=cs.numeric()),
-    "Std (data)": Metric(fn=std_data, selector=cs.numeric()),
+DEFAULT_DATA_METRICS: dict[str, DataMetric] = {
+    "Null%": DataMetric(
+        fn=null_fraction,
+        formatter=lambda value: f"{round(value * 100, 2)}%",
+        delta_formatter=lambda value: f"{round(value * 100, 2)}",
+    ),
 }
 """Preset metrics describing the left and right datasets individually."""
-
-
-# ------------------------------------------------------------------------------------ #
-#                                    UTILITY METHODS                                   #
-# ------------------------------------------------------------------------------------ #
-
-
-def _percentage_string(
-    fraction: pl.Expr, *, signed: bool = False, percent_sign: bool = True
-) -> pl.Expr:
-    """Format a fraction as a percentage string, optionally with an explicit sign."""
-    pct = (fraction * 100).round(2)
-    body = pl.format("{}%", pct) if percent_sign else pl.format("{}", pct)
-    if signed:
-        return pl.when(pct >= 0).then(pl.format("+{}", body)).otherwise(body)
-    return body
-
-
-def _numeric_string(value: pl.Expr, signed: bool) -> pl.Expr:
-    """Format a numeric value for display, optionally with an explicit sign."""
-    rounded = value.round_sig_figs(4)
-    body = pl.format("{}", rounded)
-    if signed:
-        return pl.when(rounded >= 0).then(pl.format("+{}", body)).otherwise(body)
-    return body
-
-
-def _render_numeric_change(old: pl.Expr, new: pl.Expr) -> pl.Expr:
-    """Render a change between two numeric aggregations as ``<old> -> <new>
-    (<delta>)``."""
-    return _render_change(old, new, _numeric_string)
-
-
-def _render_change(
-    old: pl.Expr,
-    new: pl.Expr,
-    format_value: Callable[[pl.Expr, bool], pl.Expr],
-) -> pl.Expr:
-    """Render a change as ``<old> -> <new> (<delta>)``.
-
-    ``format_value(value, signed)`` formats a value for display; ``old`` and ``new`` are
-    rendered unsigned and the delta ``new - old`` is rendered signed (with an explicit
-    ``+`` prefix for positive values).
-    """
-    return pl.format(
-        "{} -> {} ({})",
-        format_value(old, False),
-        format_value(new, False),
-        format_value(new - old, True),
-    )
