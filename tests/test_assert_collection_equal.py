@@ -7,7 +7,6 @@ import pytest
 from diffly.comparison import DataFrameComparison
 from diffly.testing import (
     CollectionComparisonAssertionError,
-    ComparisonAssertionError,
     assert_collection_equal,
 )
 
@@ -126,6 +125,7 @@ def test_unequal_members() -> None:
 
 
 def test_error_exposes_comparisons() -> None:
+    # Arrange
     qux1 = Qux.validate(
         {
             "foo": Foo.validate(
@@ -146,12 +146,13 @@ def test_error_exposes_comparisons() -> None:
             ),
         }
     )
+
+    # Act
     with pytest.raises(CollectionComparisonAssertionError) as exc_info:
         assert_collection_equal(qux1, qux2)
 
-    # A subclass of the shared base and of `AssertionError` for backward compatibility.
-    assert isinstance(exc_info.value, ComparisonAssertionError)
-    assert isinstance(exc_info.value, AssertionError)
+    # Assert
+    assert isinstance(exc_info.value, CollectionComparisonAssertionError)
     # Only the failing member is exposed, and its comparison is usable.
     comparisons = exc_info.value.comparisons
     assert set(comparisons) == {"foo"}
