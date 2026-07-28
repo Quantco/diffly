@@ -4,7 +4,7 @@
 import polars as pl
 import pytest
 
-from diffly import ComparisonAssertionError
+from diffly import CollectionComparisonAssertionError, ComparisonAssertionError
 from diffly.comparison import DataFrameComparison
 from diffly.testing import assert_collection_equal
 
@@ -143,12 +143,12 @@ def test_error_exposes_comparisons() -> None:
             ),
         }
     )
-    with pytest.raises(ComparisonAssertionError) as exc_info:
+    with pytest.raises(CollectionComparisonAssertionError) as exc_info:
         assert_collection_equal(qux1, qux2)
 
-    # A subclass of `AssertionError` for backward compatibility.
+    # A subclass of the shared base and of `AssertionError` for backward compatibility.
+    assert isinstance(exc_info.value, ComparisonAssertionError)
     assert isinstance(exc_info.value, AssertionError)
-    assert exc_info.value.comparison is None
     # Only the failing member is exposed, and its comparison is usable.
     comparisons = exc_info.value.comparisons
     assert set(comparisons) == {"foo"}

@@ -14,33 +14,48 @@ class PrimaryKeyError(ValueError):
 
 
 class ComparisonAssertionError(AssertionError):
-    """Raised when a diffly assertion fails.
+    """Base class for diffly assertion failures.
 
-    In addition to the human-readable summary, this error carries the underlying
-    comparison object(s), making interactive debugging straightforward. When a test
-    fails and is run with ``--pdb`` (or another post-mortem debugger), the comparison
-    can be accessed from the debugger prompt via the ``$_exception`` convenience
-    variable::
+    The concrete subclasses carry the underlying comparison object(s), making
+    interactive debugging straightforward. When a test fails and is run with ``--pdb``
+    (or another post-mortem debugger), the comparison can be accessed from the debugger
+    prompt via the ``$_exception`` convenience variable. Catch this base class to handle
+    both frame and collection failures.
+    """
+
+
+class FrameComparisonAssertionError(ComparisonAssertionError):
+    """Raised when :func:`~diffly.testing.assert_frame_equal` fails.
+
+    Access the underlying comparison from a post-mortem debugger via::
 
         (Pdb) cmp = $_exception.comparison
         (Pdb) cmp.joined_unequal()
         (Pdb) cmp.fraction_same()
 
     Attributes:
-        comparison: The comparison for :func:`~diffly.testing.assert_frame_equal`.
-            ``None`` for collection comparisons.
-        comparisons: A mapping from member name to comparison for the failing members
-            of :func:`~diffly.testing.assert_collection_equal`. Empty for frame
-            comparisons.
+        comparison: The comparison between the two data frames.
+    """
+
+    def __init__(self, message: str, *, comparison: DataFrameComparison) -> None:
+        super().__init__(message)
+        self.comparison = comparison
+
+
+class CollectionComparisonAssertionError(ComparisonAssertionError):
+    """Raised when :func:`~diffly.testing.assert_collection_equal` fails.
+
+    Access the failing member comparisons from a post-mortem debugger via::
+
+        (Pdb) cmps = $_exception.comparisons
+        (Pdb) cmps["some_member"].joined_unequal()
+
+    Attributes:
+        comparisons: A mapping from member name to comparison for the failing members.
     """
 
     def __init__(
-        self,
-        message: str,
-        *,
-        comparison: DataFrameComparison | None = None,
-        comparisons: dict[str, DataFrameComparison] | None = None,
+        self, message: str, *, comparisons: dict[str, DataFrameComparison]
     ) -> None:
         super().__init__(message)
-        self.comparison = comparison
-        self.comparisons = comparisons or {}
+        self.comparisons = comparisons
