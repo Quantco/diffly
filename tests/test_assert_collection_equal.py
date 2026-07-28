@@ -41,29 +41,31 @@ class Quux(dy.Collection):
     bar: dy.LazyFrame[Bar]
 
 
-def test_identical() -> None:
+@pytest.fixture
+def matching() -> pl.DataFrame:
+    return pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 3.0]})
+
+
+@pytest.fixture
+def mismatching() -> pl.DataFrame:
+    return pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 4.0]})
+
+
+def test_identical(matching: pl.DataFrame) -> None:
     qux = Qux.validate(
         {
-            "foo": Foo.validate(
-                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 3.0]}), cast=True
-            ),
-            "bar": Bar.validate(
-                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 3.0]}), cast=True
-            ),
+            "foo": Foo.validate(matching, cast=True),
+            "bar": Bar.validate(matching, cast=True),
         }
     )
     assert_collection_equal(qux, qux)
 
 
-def test_different_types() -> None:
+def test_different_types(matching: pl.DataFrame) -> None:
     qux = Qux.validate(
         {
-            "foo": Foo.validate(
-                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 3.0]}), cast=True
-            ),
-            "bar": Bar.validate(
-                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 3.0]}), cast=True
-            ),
+            "foo": Foo.validate(matching, cast=True),
+            "bar": Bar.validate(matching, cast=True),
         }
     )
     quux = Quux.validate(qux.to_dict())
@@ -71,79 +73,55 @@ def test_different_types() -> None:
         assert_collection_equal(qux, quux)
 
 
-def test_missing_member() -> None:
+def test_missing_member(matching: pl.DataFrame) -> None:
     qux1 = Qux.validate(
         {
-            "foo": Foo.validate(
-                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 3.0]}), cast=True
-            ),
-            "bar": Bar.validate(
-                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 3.0]}), cast=True
-            ),
-            "baz": Baz.validate(
-                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 3.0]}), cast=True
-            ),
+            "foo": Foo.validate(matching, cast=True),
+            "bar": Bar.validate(matching, cast=True),
+            "baz": Baz.validate(matching, cast=True),
         }
     )
     qux2 = Qux.validate(
         {
-            "foo": Foo.validate(
-                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 3.0]}), cast=True
-            ),
-            "bar": Bar.validate(
-                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 3.0]}), cast=True
-            ),
+            "foo": Foo.validate(matching, cast=True),
+            "bar": Bar.validate(matching, cast=True),
         }
     )
     with pytest.raises(AssertionError, match="The collections have different members"):
         assert_collection_equal(qux1, qux2)
 
 
-def test_unequal_members() -> None:
+def test_unequal_members(matching: pl.DataFrame, mismatching: pl.DataFrame) -> None:
     qux1 = Qux.validate(
         {
-            "foo": Foo.validate(
-                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 3.0]}), cast=True
-            ),
-            "bar": Bar.validate(
-                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 3.0]}), cast=True
-            ),
+            "foo": Foo.validate(matching, cast=True),
+            "bar": Bar.validate(matching, cast=True),
         }
     )
     qux2 = Qux.validate(
         {
-            "foo": Foo.validate(
-                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 4.0]}), cast=True
-            ),
-            "bar": Bar.validate(
-                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 4.0]}), cast=True
-            ),
+            "foo": Foo.validate(mismatching, cast=True),
+            "bar": Bar.validate(mismatching, cast=True),
         }
     )
     with pytest.raises(AssertionError, match="The following members are not equal"):
         assert_collection_equal(qux1, qux2)
 
 
-def test_error_exposes_comparisons() -> None:
+def test_error_exposes_comparisons(
+    matching: pl.DataFrame, mismatching: pl.DataFrame
+) -> None:
     # Arrange
     qux1 = Qux.validate(
         {
-            "foo": Foo.validate(
-                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 3.0]}), cast=True
-            ),
-            "bar": Bar.validate(
-                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 3.0]}), cast=True
-            ),
+            "foo": Foo.validate(matching, cast=True),
+            "bar": Bar.validate(matching, cast=True),
         }
     )
     qux2 = Qux.validate(
         {
-            "foo": Foo.validate(
-                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 4.0]}), cast=True
-            ),
-            "bar": Bar.validate(
-                pl.DataFrame({"index": [1, 2, 3], "value": [1.0, 2.0, 3.0]}), cast=True
-            ),
+            "foo": Foo.validate(mismatching, cast=True),
+            "bar": Bar.validate(matching, cast=True),
         }
     )
 
