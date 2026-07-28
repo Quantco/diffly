@@ -11,7 +11,7 @@
    ┏━━━━━━━┳━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━━┳━━━━━━━┓
    ┃       ┃       ┃        ┃       ┃        ┃       ┃        ┃  Mean ┃   Mean ┃       ┃
    ┃ Colum ┃ Match ┃   Mean ┃ Medi… ┃ Minim… ┃ Maxi… ┃ Stand… ┃ Abso… ┃ Relat… ┃   Top ┃
-   ┃ n     ┃  Rate ┃  Delta ┃ Delta ┃  Delta ┃ Delta ┃ Devia… ┃ Devi… ┃ Devia… ┃ Chan… ┃
+   ┃ n     ┃  Rate ┃   Diff ┃  Diff ┃   Diff ┃  Diff ┃   Diff ┃  Diff ┃   Diff ┃ Chan… ┃
    ┡━━━━━━━╇━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━━╇━━━━━━━┩
    │ price │ 60.0… │    0.6 │     0 │      0 │     2 │ 0.8944 │   0.6 │   0.02 │  40.0 │
    │       │       │        │       │        │       │        │       │        │    -> │

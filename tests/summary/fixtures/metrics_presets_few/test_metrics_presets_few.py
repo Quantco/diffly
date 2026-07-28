@@ -29,5 +29,8 @@ def test_generate() -> None:
     comp = compare_frames(left, right, primary_key=["id"])
     generate_summaries(
         comp,
-        metrics={"Mean": metrics.mean, "Max": metrics.max},
+        change_metrics={
+            "Mean diff": metrics.change.mean,
+            "Max diff": metrics.change.max,
+        },
     )

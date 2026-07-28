@@ -13,6 +13,8 @@ import pytest
 
 from diffly import compare_frames, metrics
 from diffly.comparison import DataFrameComparison
+from diffly.metrics.change import ChangeMetric, ChangeMetricFn
+from diffly.metrics.data import DEFAULT_DATA_METRICS, DataMetric, DataMetricFn
 from diffly.summary import _format_fraction_as_percentage, to_json_safe
 
 
@@ -181,7 +183,19 @@ def test_summary_data_parametrized(
     comp = _make_comparison()
     top_k = 3 if show_top_column_changes else 0
     hidden_columns = ["value"] if hide_value else None
-    metrics_arg = {"Mean": metrics.mean, "Max": metrics.max} if with_metrics else None
+    change_metrics_arg: dict[str, ChangeMetricFn | ChangeMetric] | None = (
+        {"Mean diff": metrics.change.mean, "Max diff": metrics.change.max}
+        if with_metrics
+        else None
+    )
+    data_metrics_arg: dict[str, DataMetricFn | DataMetric] | None = (
+        {
+            "Null%": DEFAULT_DATA_METRICS["Null%"],
+            "Data max": DataMetric(fn=lambda col: col.max()),
+        }
+        if with_metrics
+        else None
+    )
     summary = comp.summary(
         show_perfect_column_matches=show_perfect_column_matches,
         top_k_column_changes=top_k,
@@ -189,7 +203,8 @@ def test_summary_data_parametrized(
         show_sample_primary_key_per_change=sample_pk,
         slim=slim,
         hidden_columns=hidden_columns,
-        metrics=metrics_arg,
+        data_metrics=data_metrics_arg,
+        change_metrics=change_metrics_arg,
     )
     result = json.loads(summary.to_json())
 
@@ -228,7 +243,9 @@ def test_summary_data_parametrized(
             else None
         ),
         # Joined rows (id=1,2,3): value deltas = [0, 5, 0].
-        "metrics": {"Mean": pytest.approx(5 / 3), "Max": 5.0} if with_metrics else None,
+        "change_metrics": {"Mean diff": pytest.approx(5 / 3), "Max diff": 5.0}
+        if with_metrics
+        else None,
     }
     expected_columns = []
     if show_perfect_column_matches:
@@ -238,10 +255,39 @@ def test_summary_data_parametrized(
                 "match_rate": 1.0,
                 "n_total_changes": 0,
                 "changes": None,
-                "metrics": None,
+                "change_metrics": None,
             }
         )
     expected_columns.append(value_col)
+
+    # Data metrics land in the separate `data_inspection` section. Data metrics look at
+    # the full column, so "Data max" reflects the unjoined rows id=4 (left, 40.0) and id=5
+    # (right, 50.0) rather than the joined-rows max of 30.0. Hidden columns are skipped
+    # entirely, so hiding `value` drops it from the data inspection section too.
+    expected_data_inspection: list[dict] | None = None
+    if with_metrics:
+        expected_data_inspection = [
+            {
+                "name": "status",
+                "data_metrics": {
+                    "Null%": {"left": pytest.approx(0.0), "right": pytest.approx(0.0)},
+                    "Data max": {"left": "d", "right": "e"},
+                },
+            },
+        ]
+        if not hide_value:
+            expected_data_inspection.append(
+                {
+                    "name": "value",
+                    "data_metrics": {
+                        "Null%": {
+                            "left": pytest.approx(0.0),
+                            "right": pytest.approx(0.0),
+                        },
+                        "Data max": {"left": 40.0, "right": 50.0},
+                    },
+                }
+            )
 
     expected = {
         "equal": False,
@@ -258,6 +304,7 @@ def test_summary_data_parametrized(
             "n_right_only": 1,
         },
         "columns": expected_columns,
+        "data_inspection": expected_data_inspection,
         "sample_rows_left_only": [[4]] if sample_rows else None,
         "sample_rows_right_only": [[5]] if sample_rows else None,
     }

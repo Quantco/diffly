@@ -27,7 +27,8 @@ API Reference
       :link: metrics
       :link-type: doc
 
-      Built-in metric presets and the ``MetricFn`` callable for ``summary(metrics=...)``.
+      Built-in metric presets and the metric types for
+      ``summary(data_metrics=..., change_metrics=...)``.
 
    .. grid-item-card:: Testing
       :link: testing

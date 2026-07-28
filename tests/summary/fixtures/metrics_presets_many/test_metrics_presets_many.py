@@ -5,6 +5,7 @@ import polars as pl
 import pytest
 
 from diffly import compare_frames, metrics
+from diffly.metrics.data import DEFAULT_DATA_METRICS
 from tests.utils import generate_summaries
 
 
@@ -29,13 +30,14 @@ def test_generate() -> None:
     comp = compare_frames(left, right, primary_key=["id"])
     generate_summaries(
         comp,
-        metrics={
-            "Mean": metrics.mean,
-            "Median": metrics.median,
-            "Min": metrics.min,
-            "Max": metrics.max,
-            "Std": metrics.std,
-            "Mean absolute deviation": metrics.mean_absolute_deviation,
-            "Mean relative deviation": metrics.mean_relative_deviation,
+        change_metrics={
+            "Mean diff": metrics.change.mean,
+            "Median diff": metrics.change.median,
+            "Min diff": metrics.change.min,
+            "Max diff": metrics.change.max,
+            "Std diff": metrics.change.std,
+            "Mean absolute diff": metrics.change.mean_absolute_deviation,
+            "Mean relative diff": metrics.change.mean_relative_deviation,
         },
+        data_metrics=DEFAULT_DATA_METRICS,
     )
