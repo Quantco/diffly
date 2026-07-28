@@ -728,7 +728,7 @@ class DataFrameComparison:
             return False
 
         return (
-            pl.concat([left, right], how="horizontal")
+            pl.concat([left, right], how="horizontal_extend")
             .select(
                 condition_equal_rows(
                     columns=common_columns,
@@ -1246,9 +1246,12 @@ def _list_length_exprs(
     """Collect max-list-length scalar expressions for every List level in the type
     tree."""
     if isinstance(dtype, pl.List):
-        return [expr.list.len().max(), *_list_length_exprs(expr.explode(), dtype.inner)]
+        return [
+            expr.list.len().max(),
+            *_list_length_exprs(expr.explode(empty_as_null=True), dtype.inner),
+        ]
     if isinstance(dtype, pl.Array):
-        return _list_length_exprs(expr.explode(), dtype.inner)
+        return _list_length_exprs(expr.explode(empty_as_null=True), dtype.inner)
     if isinstance(dtype, pl.Struct):
         return [
             e
