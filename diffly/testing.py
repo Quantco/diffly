@@ -22,6 +22,67 @@ from .comparison import DataFrameComparison, compare_frames
 from .metrics.change import ChangeMetric, ChangeMetricFn
 from .metrics.data import DataMetric, DataMetricFn
 
+# ------------------------------------ EXCEPTIONS ------------------------------------- #
+
+
+class ComparisonAssertionError(AssertionError):
+    """Base class for diffly assertion failures."""
+
+
+class FrameComparisonAssertionError(ComparisonAssertionError):
+    """Raised when :func:`assert_frame_equal` fails.
+
+    Access the underlying comparison from the exception using ``e.comparison``
+    or in a post-mortem debugger via the ``$_exception`` convenience variable
+    (requires Python >= 3.12)::
+
+        (Pdb) cmp = $_exception.comparison
+        (Pdb) cmp.joined_unequal()
+
+    Attributes:
+        comparison: The comparison between the two data frames.
+    """
+
+    def __init__(self, message: str, *, comparison: DataFrameComparison) -> None:
+        super().__init__(message)
+        self.comparison = comparison
+
+
+class CollectionComparisonAssertionError(ComparisonAssertionError):
+    """Raised when :func:`assert_collection_equal` fails.
+
+    Access the failing member comparisons from the exception using ``e.comparisons``
+    or from a post-mortem debugger via the ``$_exception`` convenience variable
+    (requires Python >= 3.12)::
+
+        (Pdb) cmps = $_exception.comparisons
+        (Pdb) cmps["some_member"].joined_unequal()
+
+    Attributes:
+        comparisons: A mapping from member name to comparison for the failing members.
+    """
+
+    def __init__(
+        self, message: str, *, comparisons: dict[str, DataFrameComparison]
+    ) -> None:
+        super().__init__(message)
+        self.comparisons = comparisons
+
+
+# ------------------------------------ ASSERTIONS ------------------------------------- #
+
+_DEBUG_HINT_FRAME = (
+    "To debug interactively (e.g. with `pytest --pdb`), access the comparison via "
+    "`$_exception.comparison` at the debugger prompt (requires Python >= 3.12) or via "
+    "the `.comparison` attribute of this error."
+)
+_DEBUG_HINT_COLLECTION = (
+    "To debug interactively (e.g. with `pytest --pdb`), access the failing member "
+    "comparisons via `$_exception.comparisons` (a mapping from member name to "
+    "comparison) at the debugger prompt (requires Python >= 3.12) or via the "
+    "`.comparisons` attribute of this error."
+)
+
 
 def assert_collection_equal(
     left: dy.Collection,
@@ -100,7 +161,7 @@ def assert_collection_equal(
             change metrics are computed.
 
     Raises:
-        AssertionError: If the collections are not equal.
+        CollectionComparisonAssertionError: If the collections are not equal.
 
     Examples:
         >>> import dataframely as dy
@@ -163,7 +224,10 @@ def assert_collection_equal(
             ),
             " " * 2,
         )
-        raise AssertionError(f"The following members are not equal:\n\n{text}")
+        raise CollectionComparisonAssertionError(
+            f"The following members are not equal:\n\n{text}\n\n{_DEBUG_HINT_COLLECTION}",
+            comparisons=failed_member_comparisons,
+        )
 
 
 def assert_frame_equal(
@@ -251,7 +315,7 @@ def assert_frame_equal(
             change metrics are computed.
 
     Raises:
-        AssertionError: If the data frames are not equal.
+        FrameComparisonAssertionError: If the data frames are not equal.
 
     Note:
         Contrary to :meth:`polars.testing.assert_frame_equal`, the data frames ``left``
@@ -298,7 +362,10 @@ def assert_frame_equal(
             change_metrics=change_metrics,
         )
         text = textwrap.indent(str(summary), " " * 2)
-        raise AssertionError(f"Data frames are not equal:\n\n{text}")
+        raise FrameComparisonAssertionError(
+            f"Data frames are not equal:\n\n{text}\n\n{_DEBUG_HINT_FRAME}",
+            comparison=comparison,
+        )
 
 
 def _get_heading(title: str) -> str:
