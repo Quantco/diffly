@@ -187,7 +187,7 @@ def test_summary_data_parametrized(
     # (routed to the separate `data_inspection` section). "Data max" is a data metric so
     # it sees the whole column, including the unjoined rows id=4/id=5.
     change_metrics_arg: dict[str, ChangeMetricFn | ChangeMetric] | None = (
-        {"Mean": metrics.change.mean, "Max": metrics.change.max}
+        {"Mean diff": metrics.change.mean, "Max diff": metrics.change.max}
         if with_metrics
         else None
     )
