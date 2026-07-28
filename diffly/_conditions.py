@@ -153,8 +153,10 @@ def _compare_columns(
                 )
             return col_left.eq_missing(col_right)
 
-    if _different_enums(dtype_left, dtype_right) or _enum_and_categorical(
-        dtype_left, dtype_right
+    if (
+        _different_enums(dtype_left, dtype_right)
+        or _different_categoricals(dtype_left, dtype_right)
+        or _enum_and_categorical(dtype_left, dtype_right)
     ):
         # Enums with different categories as well as enums and categoricals
         # can't be compared directly.
@@ -267,6 +269,7 @@ def _needs_element_wise_comparison(
         _is_float_numeric_pair(dtype_left, dtype_right)
         or _is_temporal_pair(dtype_left, dtype_right)
         or _different_enums(dtype_left, dtype_right)
+        or _different_categoricals(dtype_left, dtype_right)
         or _enum_and_categorical(dtype_left, dtype_right)
     ):
         return True
@@ -320,6 +323,16 @@ def _different_enums(
     left: DataType | DataTypeClass, right: DataType | DataTypeClass
 ) -> bool:
     return isinstance(left, pl.Enum) and isinstance(right, pl.Enum) and left != right
+
+
+def _different_categoricals(
+    left: DataType | DataTypeClass, right: DataType | DataTypeClass
+) -> bool:
+    return (
+        isinstance(left, pl.Categorical)
+        and isinstance(right, pl.Categorical)
+        and left != right
+    )
 
 
 def _enum_and_categorical(
