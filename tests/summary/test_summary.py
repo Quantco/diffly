@@ -183,9 +183,6 @@ def test_summary_data_parametrized(
     comp = _make_comparison()
     top_k = 3 if show_top_column_changes else 0
     hidden_columns = ["value"] if hide_value else None
-    # Mix change metrics (routed to each column's `change_metrics`) with data metrics
-    # (routed to the separate `data_inspection` section). "Data max" is a data metric so
-    # it sees the whole column, including the unjoined rows id=4/id=5.
     change_metrics_arg: dict[str, ChangeMetricFn | ChangeMetric] | None = (
         {"Mean diff": metrics.change.mean, "Max diff": metrics.change.max}
         if with_metrics
