@@ -56,5 +56,25 @@ DEFAULT_DATA_METRICS: dict[str, DataMetric] = {
         formatter=lambda value: f"{round(value * 100, 2)}%",
         delta_formatter=lambda value: f"{round(value * 100, 2)}",
     ),
+    "Mean": DataMetric(
+        fn=lambda col: col.mean(),
+        formatter=lambda value: f"{round(value, 2)}",
+        selector=cs.numeric(),
+    ),
+    "Median": DataMetric(
+        fn=lambda col: col.median(),
+        formatter=lambda value: f"{round(value, 2)}",
+        selector=cs.numeric(),
+    ),
+    "Min": DataMetric(
+        fn=lambda col: col.min(),
+        formatter=lambda value: f"{round(value, 2)}",
+        selector=cs.numeric(),
+    ),
+    "Max": DataMetric(
+        fn=lambda col: col.max(),
+        formatter=lambda value: f"{round(value, 2)}",
+        selector=cs.numeric(),
+    ),
 }
 """Preset metrics describing the left and right datasets individually."""
