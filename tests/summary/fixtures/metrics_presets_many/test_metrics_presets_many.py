@@ -36,6 +36,6 @@ def test_generate() -> None:
             "Max diff": metrics.change.max,
             "Std diff": metrics.change.std,
             "Mean absolute diff": metrics.change.mean_absolute_deviation,
-            "Mean relative diff: metrics.change.mean_relative_deviation,
+            "Mean relative diff": metrics.change.mean_relative_deviation,
         },
     )
