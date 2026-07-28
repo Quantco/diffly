@@ -555,6 +555,43 @@ def test_condition_equal_columns_list_of_different_enums() -> None:
     assert actual.to_list() == [True, False]
 
 
+def test_condition_equal_columns_different_categorical() -> None:
+    # Arrange
+    fruits = pl.Categorical(categories=pl.Categories(name="fruits"))
+    fruit = pl.Categorical(categories=pl.Categories(name="fruit"))
+
+    lhs = pl.DataFrame(
+        {"pk": [1, 2], "a": ["apple", "orange"]},
+        schema_overrides={"a": fruits},
+    )
+    rhs = pl.DataFrame(
+        {"pk": [1, 2], "a": ["apple", "banana"]},
+        schema_overrides={"a": fruit},
+    )
+    c = compare_frames(lhs, rhs, primary_key="pk")
+
+    # Act
+    lhs = lhs.rename({"a": "a_left"})
+    rhs = rhs.rename({"a": "a_right"})
+    actual = (
+        lhs.join(rhs, on="pk", maintain_order="left")
+        .select(
+            condition_equal_columns(
+                "a",
+                dtype_left=lhs.schema["a_left"],
+                dtype_right=rhs.schema["a_right"],
+                max_list_length=None,
+                abs_tol=c.abs_tol_by_column["a"],
+                rel_tol=c.rel_tol_by_column["a"],
+            )
+        )
+        .to_series()
+    )
+
+    # Assert
+    assert actual.to_list() == [True, False]
+
+
 @pytest.mark.parametrize(
     ("dtype_left", "dtype_right", "can_compare_dtypes"),
     [
