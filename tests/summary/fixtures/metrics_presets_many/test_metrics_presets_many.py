@@ -5,6 +5,7 @@ import polars as pl
 import pytest
 
 from diffly import compare_frames, metrics
+from diffly.metrics.data import DEFAULT_DATA_METRICS
 from tests.utils import generate_summaries
 
 
@@ -38,4 +39,5 @@ def test_generate() -> None:
             "Mean absolute diff": metrics.change.mean_absolute_deviation,
             "Mean relative diff": metrics.change.mean_relative_deviation,
         },
+        data_metrics=DEFAULT_DATA_METRICS,
     )
