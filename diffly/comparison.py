@@ -728,7 +728,7 @@ class DataFrameComparison:
             return False
 
         return (
-            pl.concat([left, right], how="horizontal_extend")
+            pl.concat([left, right], how="horizontal", strict=True)
             .select(
                 condition_equal_rows(
                     columns=common_columns,
