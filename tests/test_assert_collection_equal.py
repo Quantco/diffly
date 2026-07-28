@@ -4,9 +4,12 @@
 import polars as pl
 import pytest
 
-from diffly import CollectionComparisonAssertionError, ComparisonAssertionError
 from diffly.comparison import DataFrameComparison
-from diffly.testing import assert_collection_equal
+from diffly.testing import (
+    CollectionComparisonAssertionError,
+    ComparisonAssertionError,
+    assert_collection_equal,
+)
 
 pytest.importorskip("dataframely", reason="requires dataframely")
 import dataframely as dy

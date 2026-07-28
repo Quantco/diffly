@@ -18,12 +18,55 @@ from diffly._utils import (
 from diffly.summary import WIDTH
 
 from ._compat import dy
-from ._exceptions import (
-    CollectionComparisonAssertionError,
-    FrameComparisonAssertionError,
-)
 from .comparison import DataFrameComparison, compare_frames
 from .metrics import Metric, MetricFn
+
+# ------------------------------------ EXCEPTIONS ------------------------------------- #
+
+
+class ComparisonAssertionError(AssertionError):
+    """Base class for diffly assertion failures."""
+
+
+class FrameComparisonAssertionError(ComparisonAssertionError):
+    """Raised when :func:`assert_frame_equal` fails.
+
+    Access the underlying comparison from the exception using ``e.comparison``
+    or in a post-mortem debugger via::
+
+        (Pdb) cmp = $_exception.comparison
+        (Pdb) cmp.joined_unequal()
+
+    Attributes:
+        comparison: The comparison between the two data frames.
+    """
+
+    def __init__(self, message: str, *, comparison: DataFrameComparison) -> None:
+        super().__init__(message)
+        self.comparison = comparison
+
+
+class CollectionComparisonAssertionError(ComparisonAssertionError):
+    """Raised when :func:`assert_collection_equal` fails.
+
+    Access the failing member comparisons from the exception using ``e.comparisons``
+    or from a post-mortem debugger via::
+
+        (Pdb) cmps = $_exception.comparisons
+        (Pdb) cmps["some_member"].joined_unequal()
+
+    Attributes:
+        comparisons: A mapping from member name to comparison for the failing members.
+    """
+
+    def __init__(
+        self, message: str, *, comparisons: dict[str, DataFrameComparison]
+    ) -> None:
+        super().__init__(message)
+        self.comparisons = comparisons
+
+
+# ------------------------------------ ASSERTIONS ------------------------------------- #
 
 _DEBUG_HINT_FRAME = (
     "To debug interactively (e.g. with `pytest --pdb`), access the comparison via "

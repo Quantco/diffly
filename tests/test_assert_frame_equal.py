@@ -6,13 +6,13 @@ import textwrap
 import polars as pl
 import pytest
 
-from diffly import (
+from diffly import compare_frames
+from diffly.comparison import DataFrameComparison
+from diffly.testing import (
     ComparisonAssertionError,
     FrameComparisonAssertionError,
-    compare_frames,
+    assert_frame_equal,
 )
-from diffly.comparison import DataFrameComparison
-from diffly.testing import assert_frame_equal
 
 
 def test_success_equal() -> None:
