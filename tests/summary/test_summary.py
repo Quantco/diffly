@@ -246,7 +246,7 @@ def test_summary_data_parametrized(
             else None
         ),
         # Joined rows (id=1,2,3): value deltas = [0, 5, 0].
-        "change_metrics": {"Mean": pytest.approx(5 / 3), "Max": 5.0}
+        "change_metrics": {"Mean diff": pytest.approx(5 / 3), "Max diff": 5.0}
         if with_metrics
         else None,
     }
