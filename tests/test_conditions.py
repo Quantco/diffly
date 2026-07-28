@@ -561,11 +561,11 @@ def test_condition_equal_columns_different_categorical() -> None:
     fruit = pl.Categorical(categories=pl.Categories(name="fruit"))
 
     lhs = pl.DataFrame(
-        {"pk": [1, 2], "a": ["apples", "oranges"]},
+        {"pk": [1, 2], "a": ["apple", "orange"]},
         schema_overrides={"a": fruits},
     )
     rhs = pl.DataFrame(
-        {"pk": [1, 2], "a": ["apple", "orange"]},
+        {"pk": [1, 2], "a": ["apple", "banana"]},
         schema_overrides={"a": fruit},
     )
     c = compare_frames(lhs, rhs, primary_key="pk")
@@ -589,7 +589,7 @@ def test_condition_equal_columns_different_categorical() -> None:
     )
 
     # Assert
-    assert actual.to_list() == [False, False]
+    assert actual.to_list() == [True, False]
 
 
 @pytest.mark.parametrize(
