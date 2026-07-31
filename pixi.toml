@@ -1,19 +1,19 @@
 [workspace]
-name = "diffly"
-description = "Utility package for comparing polars dataframes."
 channels = ["conda-forge"]
-platforms = ["osx-arm64", "osx-64", "linux-64", "linux-aarch64", "win-64"]
+description = "Utility package for comparing polars dataframes."
+name = "diffly"
+platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64"]
 
 [tasks]
 postinstall = "pip install --no-build-isolation --no-deps --disable-pip-version-check -e ."
 
 [dependencies]
+hatch-vcs = "*"
+hatchling = "*"
+pip = "*"
 polars = ">=1.32,<2" # is_close() only exists since 1.32
 python = ">=3.11"
 rich = "*"
-pip = "*"
-hatchling = "*"
-hatch-vcs = "*"
 
 [feature.docs.dependencies]
 myst-nb = "*"
@@ -72,14 +72,14 @@ python = "3.13.*"
 python = "3.14.*"
 
 [feature.optional.dependencies]
-dataframely = ">=2,<3"
+dataframely = ">=3,<4"
 typer = ">=0.21,<1"
 
 [environments]
-default = ["optional", "dev", "test"]
+build = ["build"]
+default = ["dev", "optional", "test"]
 docs = ["docs"]
 lint = { features = ["lint"], no-default-feature = true }
-build = ["build"]
 no-optional-dependencies = ["py314", "test"]
 py311 = ["optional", "py311", "test"]
 py312 = ["optional", "py312", "test"]

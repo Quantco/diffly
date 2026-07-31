@@ -38,7 +38,7 @@ packages = ["diffly"]
 diffly = "diffly.cli:app"
 
 [project.optional-dependencies]
-dataframely = ["dataframely>=2,<3"]
+dataframely = ["dataframely>=2,<4"]
 typer = ["typer>=0.21,<1"]
 
 [tool.docformatter]
