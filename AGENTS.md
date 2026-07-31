@@ -62,6 +62,7 @@ comparison.summary()         # Rich-formatted report
 
 - Minimal comments - only where code is non-obvious
 - Commit titles follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) with capitalized first letter: `feat: Add new feature`
+- No defensive code. Only validate at system boundaries (user input, external APIs, file/network I/O). Trust internal callers, framework guarantees, and type signatures — don't add try/except, None checks, fallbacks, or input validation for cases that can't occur. If a precondition is violated, let it raise. Don't write error handling without a concrete failure mode in mind.
 
 ### API Consistency Requirements
 

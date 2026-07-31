@@ -3,8 +3,6 @@ on:
   pull_request_target: # zizmor: ignore[dangerous-triggers] no PR code executed
     branches: [main]
     types: [opened, reopened, edited, synchronize]
-  push:
-    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -13,7 +11,6 @@ concurrency:
 jobs:
   check-pr-title:
     name: Check PR Title
-    if: github.event_name == 'pull_request_target'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -28,7 +25,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
       - name: Post comment about invalid PR title
         if: failure()
-        uses: marocchino/sticky-pull-request-comment@70d2764d1a7d5d9560b100cbea0077fc8f633987 # v3.0.2
+        uses: marocchino/sticky-pull-request-comment@0ea0beb66eb9baf113663a64ec522f60e49231c0 # v3.0.4
         with:
           header: conventional-commit-pr-title
           message: |
@@ -47,22 +44,19 @@ jobs:
             </details>
       - name: Delete comment about invalid PR title
         if: success()
-        uses: marocchino/sticky-pull-request-comment@70d2764d1a7d5d9560b100cbea0077fc8f633987 # v3.0.2
+        uses: marocchino/sticky-pull-request-comment@0ea0beb66eb9baf113663a64ec522f60e49231c0 # v3.0.4
         with:
           header: conventional-commit-pr-title
           delete: true
 
-  release-drafter:
-    name: ${{ github.event_name == 'pull_request_target' && 'Assign Labels' || 'Draft Release' }}
+  assign-labels:
+    name: Assign Labels
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       pull-requests: write
     steps:
-      - name: ${{ github.event_name == 'pull_request_target' && 'Assign labels' || 'Update release draft' }}
-        uses: release-drafter/release-drafter@139054aeaa9adc52ab36ddf67437541f039b88e2 # v7.1.1
+      - name: Assign labels
+        uses: release-drafter/release-drafter/autolabeler@693d20e7c1ce1a81d3a41962f85914253b518449 # v7.3.1
         with:
-          disable-releaser: ${{ github.event_name == 'pull_request_target' }}
-          disable-autolabeler: ${{ github.event_name == 'push' }}
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+          token: ${{ github.token }}

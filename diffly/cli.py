@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import datetime as dt
+import warnings
 from pathlib import Path
 from typing import Annotated
 
@@ -11,6 +12,8 @@ from diffly import compare_frames
 
 from ._compat import typer
 from ._utils import ABS_TOL_DEFAULT, ABS_TOL_TEMPORAL_DEFAULT, REL_TOL_DEFAULT
+from .metrics.change import DEFAULT_CHANGE_METRICS
+from .metrics.data import DEFAULT_DATA_METRICS
 
 app = typer.Typer()
 
@@ -110,7 +113,17 @@ def main(
             )
         ),
     ] = False,
-    hidden_columns: Annotated[
+    output_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help=(
+                "Output a machine-readable JSON digest instead of a rich-formatted "
+                "summary."
+            ),
+        ),
+    ] = False,
+    hidden_column: Annotated[
         list[str],
         typer.Option(
             help=(
@@ -119,8 +132,51 @@ def main(
             )
         ),
     ] = [],
+    hidden_columns: Annotated[
+        list[str],
+        typer.Option(hidden=True),
+    ] = [],
+    data_metric: Annotated[
+        list[str],
+        typer.Option(
+            help=(
+                "Data metric presets to display in the Data Inspection section. "
+                f"Repeatable. Available: {', '.join(DEFAULT_DATA_METRICS)}."
+            )
+        ),
+    ] = [],
+    change_metric: Annotated[
+        list[str],
+        typer.Option(
+            help=(
+                "Change metric presets to display as extra columns in the Columns "
+                f"table. Repeatable. Available: {', '.join(DEFAULT_CHANGE_METRICS)}."
+            )
+        ),
+    ] = [],
 ) -> None:
     """Compare two `parquet` files and print the comparison result."""
+    if hidden_columns:
+        warnings.warn(
+            "`--hidden-columns` is deprecated, use `--hidden-column` instead.",
+            FutureWarning,
+        )
+        hidden_column = [*hidden_column, *hidden_columns]
+
+    for name in data_metric:
+        if name not in DEFAULT_DATA_METRICS:
+            raise typer.BadParameter(
+                f"Unknown data metric: {name!r}. "
+                f"Available: {', '.join(DEFAULT_DATA_METRICS)}."
+            )
+    for name in change_metric:
+        if name not in DEFAULT_CHANGE_METRICS:
+            raise typer.BadParameter(
+                f"Unknown change metric: {name!r}. "
+                f"Available: {', '.join(DEFAULT_CHANGE_METRICS)}."
+            )
+    data_metrics = {name: DEFAULT_DATA_METRICS[name] for name in data_metric}
+    change_metrics = {name: DEFAULT_CHANGE_METRICS[name] for name in change_metric}
 
     comparison = compare_frames(
         pl.scan_parquet(left),
@@ -130,18 +186,22 @@ def main(
         rel_tol=rel_tol,
         abs_tol_temporal=dt.timedelta(seconds=abs_tol_temporal),
     )
-    typer.echo(
-        comparison.summary(
-            show_perfect_column_matches=show_perfect_column_matches,
-            top_k_column_changes=top_k_column_changes,
-            sample_k_rows_only=sample_k_rows_only,
-            show_sample_primary_key_per_change=show_sample_primary_key_per_change,
-            left_name=left_name,
-            right_name=right_name,
-            slim=slim,
-            hidden_columns=hidden_columns,
-        ).format(pretty=True)
+    summary = comparison.summary(
+        show_perfect_column_matches=show_perfect_column_matches,
+        top_k_column_changes=top_k_column_changes,
+        sample_k_rows_only=sample_k_rows_only,
+        show_sample_primary_key_per_change=show_sample_primary_key_per_change,
+        left_name=left_name,
+        right_name=right_name,
+        slim=slim,
+        hidden_columns=hidden_column,
+        data_metrics=data_metrics,
+        change_metrics=change_metrics,
     )
+    if output_json:
+        typer.echo(summary.to_json())
+    else:
+        typer.echo(summary.format(pretty=True))
 
 
 if __name__ == "__main__":  # pragma: no cover

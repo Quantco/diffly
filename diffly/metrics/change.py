@@ -1,0 +1,94 @@
+# Copyright (c) QuantCo 2025-2026
+# SPDX-License-Identifier: BSD-3-Clause
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from dataclasses import dataclass, field
+
+import polars as pl
+import polars.selectors as cs
+
+ChangeMetricFn = Callable[[pl.Expr, pl.Expr], pl.Expr]
+"""A `ChangeMetricFn` maps a pair of column expressions to a scalar aggregation
+expression."""
+
+
+@dataclass(frozen=True)
+class ChangeMetric:
+    """A metric quantifying the *change* in a column between the two sides of a
+    comparison.
+
+    Change metrics are rendered as extra columns in the "Columns" table, alongside the
+    match rate.
+    """
+
+    fn: ChangeMetricFn
+    """Aggregates over ``right - left`` (e.g. the mean delta) to describe the change
+    itself."""
+
+    selector: cs.Selector = field(default_factory=cs.numeric)
+    """Selects the columns the metric applies to; defaults to numeric columns."""
+
+
+# ---------------------------------- CHANGE METRICS ---------------------------------- #
+
+
+def mean(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Mean of ``right - left``."""
+    return (right - left).mean()
+
+
+def median(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Median of ``right - left``."""
+    return (right - left).median()
+
+
+def min(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Minimum of ``right - left``."""
+    return (right - left).min()
+
+
+def max(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Maximum of ``right - left``."""
+    return (right - left).max()
+
+
+def std(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Standard deviation of ``right - left``."""
+    return (right - left).std()
+
+
+def mean_absolute_deviation(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Mean of ``|right - left|``."""
+    return (right - left).abs().mean()
+
+
+def mean_relative_deviation(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+    """Mean of ``|(right - left) / left|``. Yields ``inf`` or ``null`` where
+    ``left`` is zero."""
+    return ((right - left) / left).abs().mean()
+
+
+def quantile(q: float) -> ChangeMetricFn:
+    """Factory returning a metric that computes the ``q``-quantile of
+    ``right - left``."""
+    if not 0 <= q <= 1:
+        raise ValueError(f"q must be in [0, 1], got {q}")
+
+    def _quantile(left: pl.Expr, right: pl.Expr) -> pl.Expr:
+        return (right - left).quantile(q)
+
+    return _quantile
+
+
+DEFAULT_CHANGE_METRICS: dict[str, ChangeMetric] = {
+    "Mean diff": ChangeMetric(fn=mean),
+    "Median diff": ChangeMetric(fn=median),
+    "Min diff": ChangeMetric(fn=min),
+    "Max diff": ChangeMetric(fn=max),
+    "Std diff": ChangeMetric(fn=std),
+    "Mean absolute diff": ChangeMetric(fn=mean_absolute_deviation),
+    "Mean relative diff": ChangeMetric(fn=mean_relative_deviation),
+}
+"""Preset metrics describing the change between numeric columns."""

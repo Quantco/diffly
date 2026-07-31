@@ -21,15 +21,15 @@ jobs:
           # needed for 'pre-commit-mirrors-insert-license'
           fetch-depth: 0
       - name: Set up pixi
-        uses: prefix-dev/setup-pixi@a0af7a228712d6121d37aba47adf55c1332c9c2e # v0.9.4
+        uses: prefix-dev/setup-pixi@5185adfbffb4bd703da3010310260805d89ebb11 # v0.9.6
         with:
-          environments: default lint
+          environments: default lint py311
       - name: Install repository
         run: pixi run -e default postinstall
       - name: pre-commit
         run: pixi run pre-commit-run --color=always --show-diff-on-failure
       - name: Upload coverage
-        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -56,7 +56,7 @@ jobs:
       - name: Check out branch
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Set up pixi
-        uses: prefix-dev/setup-pixi@a0af7a228712d6121d37aba47adf55c1332c9c2e # v0.9.4
+        uses: prefix-dev/setup-pixi@5185adfbffb4bd703da3010310260805d89ebb11 # v0.9.6
         with:
           environments: ${{ matrix.environment }}
       - name: Install repository
@@ -64,6 +64,6 @@ jobs:
       - name: Run pytest
         run: pixi run -e ${{ matrix.environment }} test-coverage --color=yes
       - name: Upload coverage
-        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

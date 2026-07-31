@@ -25,6 +25,8 @@ from ._utils import (
     lazy_len,
     make_and_validate_mapping,
 )
+from .metrics.change import ChangeMetric, ChangeMetricFn
+from .metrics.data import DataMetric, DataMetricFn
 
 if TYPE_CHECKING:  # pragma: no cover
     # NOTE: We cannot import at runtime as we're otherwise running into circular
@@ -919,6 +921,8 @@ class DataFrameComparison:
         right_name: str = Side.RIGHT,
         slim: bool = False,
         hidden_columns: list[str] | None = None,
+        data_metrics: Mapping[str, DataMetricFn | DataMetric] | None = None,
+        change_metrics: Mapping[str, ChangeMetricFn | ChangeMetric] | None = None,
     ) -> Summary:
         """Generate a summary of all aspects of the comparison.
 
@@ -948,6 +952,30 @@ class DataFrameComparison:
                 advanced users who are familiar with the summary format.
             hidden_columns: Columns for which no values are printed, e.g. because they
                 contain sensitive information.
+            data_metrics: Optional mapping from display label to a data metric,
+                describing each dataset individually and rendered in the "Data
+                Inspection" section. A value may be a
+                :class:`~diffly.metrics.data.DataMetric` or a bare callable taking a
+                single column expression, which is wrapped in a
+                :class:`~diffly.metrics.data.DataMetric` applying to all columns. To
+                target other column types, construct the metric explicitly with a
+                column selector (e.g. ``DataMetric(fn, selector=cs.numeric())``).
+                See :doc:`/api/metrics` for the full list of presets. When ``None``
+                (default), no metrics are computed; presets are not applied
+                automatically. Prefer short labels — the summary has a fixed width and
+                many or long labels degrade rendering.
+            change_metrics: Optional mapping from display label to a change metric,
+                quantifying the change between the two sides and rendered as extra
+                columns in the "Columns" table. A value may be a
+                :class:`~diffly.metrics.change.ChangeMetric` or a bare callable taking a
+                pair of column expressions, which is wrapped in a
+                :class:`~diffly.metrics.change.ChangeMetric` applying to numerical
+                columns. To target other column types, construct the metric explicitly
+                with a column selector (e.g. ``ChangeMetric(fn, selector=cs.numeric())``).
+                See :doc:`/api/metrics` for the full list of presets. When ``None``
+                (default), no metrics are computed; presets are not applied
+                automatically. Prefer short labels — the summary has a fixed width and
+                many or long labels degrade rendering.
 
         Returns:
             A summary which can be printed or written to a file.
@@ -963,6 +991,17 @@ class DataFrameComparison:
         # NOTE: We're importing here to prevent circular imports
         from .summary import Summary
 
+        resolved_data_metrics = (
+            {label: _resolve_data_metric(v) for label, v in data_metrics.items()}
+            if data_metrics is not None
+            else None
+        )
+        resolved_change_metrics = (
+            {label: _resolve_change_metric(v) for label, v in change_metrics.items()}
+            if change_metrics is not None
+            else None
+        )
+
         return Summary(
             self,
             show_perfect_column_matches=show_perfect_column_matches,
@@ -973,6 +1012,8 @@ class DataFrameComparison:
             right_name=right_name,
             slim=slim,
             hidden_columns=hidden_columns,
+            data_metrics=resolved_data_metrics,
+            change_metrics=resolved_change_metrics,
         )
 
     # ----------------------------------- UTILITIES ----------------------------------- #
@@ -1205,9 +1246,12 @@ def _list_length_exprs(
     """Collect max-list-length scalar expressions for every List level in the type
     tree."""
     if isinstance(dtype, pl.List):
-        return [expr.list.len().max(), *_list_length_exprs(expr.explode(), dtype.inner)]
+        return [
+            expr.list.len().max(),
+            *_list_length_exprs(expr.explode(empty_as_null=True), dtype.inner),
+        ]
     if isinstance(dtype, pl.Array):
-        return _list_length_exprs(expr.explode(), dtype.inner)
+        return _list_length_exprs(expr.explode(empty_as_null=True), dtype.inner)
     if isinstance(dtype, pl.Struct):
         return [
             e
@@ -1215,3 +1259,11 @@ def _list_length_exprs(
             for e in _list_length_exprs(expr.struct[field.name], field.dtype)
         ]
     return []
+
+
+def _resolve_data_metric(v: DataMetricFn | DataMetric) -> DataMetric:
+    return v if isinstance(v, DataMetric) else DataMetric(fn=v)
+
+
+def _resolve_change_metric(v: ChangeMetricFn | ChangeMetric) -> ChangeMetric:
+    return v if isinstance(v, ChangeMetric) else ChangeMetric(fn=v)

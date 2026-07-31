@@ -1,0 +1,12 @@
+   Attention: the data frames do not match exactly, but as no primary key columns are
+   provided, the row and column matches cannot be computed.
+
+ Data Inspection
+ ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+   ┏━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━┓
+   ┃ Column ┃                 Null% ┃    Distinct ┃    Max ┃
+   ┡━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━┩
+   │ id     │   0.0% -> 0.0% (+0.0) │ 5 -> 5 (+0) │        │
+   │ price  │ 20.0% -> 0.0% (-20.0) │ 5 -> 5 (+0) │        │
+   │ status │ 0.0% -> 40.0% (+40.0) │ 5 -> 4 (-1) │ e -> x │
+   └────────┴───────────────────────┴─────────────┴────────┘

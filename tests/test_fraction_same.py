@@ -30,20 +30,24 @@ def test_missing_primary_key_fraction_same() -> None:
 @pytest.mark.parametrize("frame_type", FRAME_TYPES)
 @pytest.mark.parametrize(
     "dtypes_left",
-    itertools.zip_longest(
-        FLOAT_DTYPES,
-        SIGNED_INTEGER_DTYPES,
-        UNSIGNED_INTEGER_DTYPES,
-        fillvalue=pl.Float32,
+    list(
+        itertools.zip_longest(
+            FLOAT_DTYPES,
+            SIGNED_INTEGER_DTYPES,
+            UNSIGNED_INTEGER_DTYPES,
+            fillvalue=pl.Float32,
+        )
     ),
 )
 @pytest.mark.parametrize(
     "dtypes_right",
-    itertools.zip_longest(
-        FLOAT_DTYPES,
-        SIGNED_INTEGER_DTYPES,
-        UNSIGNED_INTEGER_DTYPES,
-        fillvalue=pl.Float32,
+    list(
+        itertools.zip_longest(
+            FLOAT_DTYPES,
+            SIGNED_INTEGER_DTYPES,
+            UNSIGNED_INTEGER_DTYPES,
+            fillvalue=pl.Float32,
+        )
     ),
 )
 @pytest.mark.parametrize("parallel", [True, False])

@@ -1,6 +1,6 @@
 # This file is managed by Copier; DO NOT EDIT OR REMOVE.
 _commit: v0.4.1-60-g881f631
-_src_path: ../copier-template-python-open-source
+_src_path: https://github.com/quantco/copier-template-python-open-source
 add_autobump_workflow: false
 author_email: ege.karaismailoglu@quantco.com
 author_name: Ege Karaismailoglu
