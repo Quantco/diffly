@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import datetime as dt
-import warnings
 from collections.abc import Iterable, Mapping, Sequence
 from functools import cached_property
 from typing import TYPE_CHECKING, Literal, Self, overload
@@ -165,18 +164,14 @@ class DataFrameComparison:
                     "The columns are not a primary key for the right data frame."
                 )
 
-            # Try joining empty frames to check if the primary key columns are
-            # compatible. If not, we set the primary key to `None` and emit an
-            # appropriate warning.
+            # Check that the primary key dtypes are compatible for joining.
             try:
                 left_schema.to_frame().join(right_schema.to_frame(), on=primary_key)
             except pl.exceptions.SchemaError as e:
-                warnings.warn(
-                    "`primary_key` is set to None as the primary key of the left and "
-                    "right tables have incompatible data types: "
-                    + str(e).split("\n")[0],
-                )
-                primary_key = None
+                raise PrimaryKeyError(
+                    "Primary key columns have incompatible dtypes between left and "
+                    "right: " + str(e).split("\n")[0]
+                ) from e
 
         # Assign other relevant attributes
         schemas = Schemas(left_schema, right_schema)

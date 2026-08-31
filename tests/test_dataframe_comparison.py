@@ -45,13 +45,12 @@ def test_pk_violation() -> None:
 
 
 def test_incompatible_primary_key_dtypes() -> None:
-    with pytest.warns(UserWarning, match=".*datatypes of join keys don't match.*"):
-        comparison = compare_frames(
+    with pytest.raises(PrimaryKeyError, match="incompatible dtypes"):
+        compare_frames(
             pl.DataFrame({"key": ["tiger"], "speed_kph": [5.0]}),
             pl.DataFrame({"key": [1], "speed_kph": [5.0]}),
             primary_key=["key"],
         )
-    comparison.summary()
 
 
 def test_incomplete_mapping() -> None:
