@@ -30,6 +30,8 @@ jobs:
           environments: nightly
       - name: Install latest Polars including prereleases
         run: pixi run -e nightly install-polars-nightly
+      - name: Show Polars version
+        run: pixi run -e nightly python -c "import polars as pl; print(pl.__version__)"
       - name: Install repository
         run: pixi run -e nightly postinstall
       - name: Run pytest
