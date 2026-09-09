@@ -75,11 +75,15 @@ python = "3.14.*"
 dataframely = ">=3,<4"
 typer = ">=0.21,<1"
 
+[feature.nightly.tasks]
+install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :all: polars polars-runtime-32"
+
 [environments]
-build = ["build"]
-default = ["dev", "optional", "test"]
-docs = ["docs"]
-lint = { features = ["lint"], no-default-feature = true }
+build = ["build", "py314"]
+default = ["dev", "optional", "test", "py314"]
+docs = ["docs", "py314"]
+lint = { features = ["lint", "py314"], no-default-feature = true }
+nightly = ["nightly", "optional", "test", "py314"]
 no-optional-dependencies = ["py314", "test"]
 py311 = ["optional", "py311", "test"]
 py312 = ["optional", "py312", "test"]

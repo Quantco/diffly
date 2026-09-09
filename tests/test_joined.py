@@ -23,7 +23,7 @@ def test_joined() -> None:
         }
     )
     comparison = compare_frames(left, right, primary_key=primary_key)
-    assert_frame_equal(expected, comparison.joined())
+    assert_frame_equal(expected, comparison.joined(), check_row_order=False)
     assert comparison.num_rows_joined() == len(expected)
 
 
@@ -47,4 +47,4 @@ def test_joined_lazy_parameter() -> None:
     result_lazy = comparison.joined(lazy=True)
     assert isinstance(result_lazy, pl.LazyFrame)
 
-    assert_frame_equal(result_eager, result_lazy.collect())
+    assert_frame_equal(result_eager, result_lazy.collect(), check_row_order=False)
