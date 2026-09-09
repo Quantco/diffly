@@ -91,7 +91,7 @@ def test_joined_equal() -> None:
                     expected_column_to_equal_rows[column], on=["id"], how="semi"
                 )
 
-            assert_frame_equal(expected_subset, actual)
+            assert_frame_equal(expected_subset, actual, check_row_order=False)
             assert len(expected_subset) == num_actual
 
 

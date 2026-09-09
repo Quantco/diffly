@@ -1,5 +1,8 @@
 name: CI
-on: [push]
+on:
+  push:
+    branches: [main]
+  pull_request:
 
 # Automatically stop old builds on the same branch/PR
 concurrency:
