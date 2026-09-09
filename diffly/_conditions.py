@@ -9,9 +9,9 @@ import polars as pl
 from polars.datatypes import DataType, DataTypeClass
 
 from diffly._utils import (
-    ABS_TOL_DEFAULT,
+    ABS_TOL_COMPARE_DEFAULT,
     ABS_TOL_TEMPORAL_DEFAULT,
-    REL_TOL_DEFAULT,
+    REL_TOL_COMPARE_DEFAULT,
     Side,
 )
 
@@ -51,8 +51,8 @@ def condition_equal_columns(
     dtype_left: pl.DataType,
     dtype_right: pl.DataType,
     max_list_length: int | None,
-    abs_tol: float = ABS_TOL_DEFAULT,
-    rel_tol: float = REL_TOL_DEFAULT,
+    abs_tol: float = ABS_TOL_COMPARE_DEFAULT,
+    rel_tol: float = REL_TOL_COMPARE_DEFAULT,
     abs_tol_temporal: dt.timedelta = ABS_TOL_TEMPORAL_DEFAULT,
 ) -> pl.Expr:
     """Build an expression whether two columns are equal, depending on the columns' data

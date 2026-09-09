@@ -9,9 +9,9 @@ import polars as pl
 from diffly import compare_frames
 from diffly._conditions import condition_equal_columns
 from diffly._utils import (
-    ABS_TOL_DEFAULT,
+    ABS_TOL_COMPARE_DEFAULT,
     ABS_TOL_TEMPORAL_DEFAULT,
-    REL_TOL_DEFAULT,
+    REL_TOL_COMPARE_DEFAULT,
     Side,
 )
 
@@ -115,8 +115,8 @@ def test_eq_missing_not_slower_than_element_wise_for_list_columns() -> None:
                 dtype_left=df.schema[col_left],
                 dtype_right=df.schema[col_right],
                 max_list_length=list_len,
-                abs_tol=ABS_TOL_DEFAULT,
-                rel_tol=REL_TOL_DEFAULT,
+                abs_tol=ABS_TOL_COMPARE_DEFAULT,
+                rel_tol=REL_TOL_COMPARE_DEFAULT,
                 abs_tol_temporal=ABS_TOL_TEMPORAL_DEFAULT,
             )
         ).to_series()

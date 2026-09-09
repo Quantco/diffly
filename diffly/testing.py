@@ -10,9 +10,9 @@ from collections.abc import Mapping, Sequence
 import polars as pl
 
 from diffly._utils import (
-    ABS_TOL_DEFAULT,
     ABS_TOL_TEMPORAL_DEFAULT,
-    REL_TOL_DEFAULT,
+    ABS_TOL_TESTING_DEFAULT,
+    REL_TOL_TESTING_DEFAULT,
     Side,
 )
 from diffly.summary import WIDTH
@@ -90,8 +90,8 @@ def assert_collection_equal(
     /,
     *,
     check_dtypes: bool = True,
-    abs_tol: float | Mapping[str, float] = ABS_TOL_DEFAULT,
-    rel_tol: float | Mapping[str, float] = REL_TOL_DEFAULT,
+    abs_tol: float | Mapping[str, float] = ABS_TOL_TESTING_DEFAULT,
+    rel_tol: float | Mapping[str, float] = REL_TOL_TESTING_DEFAULT,
     abs_tol_temporal: dt.timedelta
     | Mapping[str, dt.timedelta] = ABS_TOL_TEMPORAL_DEFAULT,
     show_perfect_column_matches: bool = False,
@@ -237,8 +237,8 @@ def assert_frame_equal(
     *,
     primary_key: str | Sequence[str] | None = None,
     check_dtypes: bool = True,
-    abs_tol: float | Mapping[str, float] = ABS_TOL_DEFAULT,
-    rel_tol: float | Mapping[str, float] = REL_TOL_DEFAULT,
+    abs_tol: float | Mapping[str, float] = ABS_TOL_TESTING_DEFAULT,
+    rel_tol: float | Mapping[str, float] = REL_TOL_TESTING_DEFAULT,
     abs_tol_temporal: dt.timedelta
     | Mapping[str, dt.timedelta] = ABS_TOL_TEMPORAL_DEFAULT,
     show_perfect_column_matches: bool = False,

@@ -15,9 +15,9 @@ from ._cache import cached_method
 from ._conditions import condition_equal_columns, condition_equal_rows
 from ._exceptions import PrimaryKeyError
 from ._utils import (
-    ABS_TOL_DEFAULT,
+    ABS_TOL_COMPARE_DEFAULT,
     ABS_TOL_TEMPORAL_DEFAULT,
-    REL_TOL_DEFAULT,
+    REL_TOL_COMPARE_DEFAULT,
     Side,
     get_select_columns,
     is_primary_key,
@@ -40,8 +40,8 @@ def compare_frames(
     /,
     *,
     primary_key: str | Sequence[str] | None = None,
-    abs_tol: float | Mapping[str, float] = ABS_TOL_DEFAULT,
-    rel_tol: float | Mapping[str, float] = REL_TOL_DEFAULT,
+    abs_tol: float | Mapping[str, float] = ABS_TOL_COMPARE_DEFAULT,
+    rel_tol: float | Mapping[str, float] = REL_TOL_COMPARE_DEFAULT,
     abs_tol_temporal: dt.timedelta
     | Mapping[str, dt.timedelta] = ABS_TOL_TEMPORAL_DEFAULT,
 ) -> DataFrameComparison:

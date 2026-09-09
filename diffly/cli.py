@@ -11,7 +11,11 @@ import polars as pl
 from diffly import compare_frames
 
 from ._compat import typer
-from ._utils import ABS_TOL_DEFAULT, ABS_TOL_TEMPORAL_DEFAULT, REL_TOL_DEFAULT
+from ._utils import (
+    ABS_TOL_COMPARE_DEFAULT,
+    ABS_TOL_TEMPORAL_DEFAULT,
+    REL_TOL_COMPARE_DEFAULT,
+)
 from .metrics.change import DEFAULT_CHANGE_METRICS
 from .metrics.data import DEFAULT_DATA_METRICS
 
@@ -34,15 +38,15 @@ def main(
     abs_tol: Annotated[
         float,
         typer.Option(
-            help="Absolute tolerance for numerical comparisons. Default is 1e-08."
+            help="Absolute tolerance for numerical comparisons. Default is 0.0."
         ),
-    ] = ABS_TOL_DEFAULT,
+    ] = ABS_TOL_COMPARE_DEFAULT,
     rel_tol: Annotated[
         float,
         typer.Option(
-            help="Relative tolerance for numerical comparisons. Default is 1e-05."
+            help="Relative tolerance for numerical comparisons. Default is 1e-09."
         ),
-    ] = REL_TOL_DEFAULT,
+    ] = REL_TOL_COMPARE_DEFAULT,
     abs_tol_temporal: Annotated[
         float,
         typer.Option(
