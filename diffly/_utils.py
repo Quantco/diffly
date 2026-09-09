@@ -51,8 +51,15 @@ def capitalize_first(s: str) -> str:
     return s[0].upper() + s[1:] if s else s
 
 
-ABS_TOL_DEFAULT = 1e-08
-REL_TOL_DEFAULT = 1e-05
+# Comparison defaults match `polars.Expr.is_close` and Python's `math.isclose`; a diff
+# tool should bias toward flagging differences.
+ABS_TOL_COMPARE_DEFAULT = 0.0
+REL_TOL_COMPARE_DEFAULT = 1e-09
+
+# Testing defaults match `polars.testing.assert_frame_equal`.
+ABS_TOL_TESTING_DEFAULT = 1e-08
+REL_TOL_TESTING_DEFAULT = 1e-05
+
 ABS_TOL_TEMPORAL_DEFAULT = dt.timedelta(0)
 
 

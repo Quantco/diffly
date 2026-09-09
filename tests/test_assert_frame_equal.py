@@ -66,6 +66,22 @@ def test_success_with_nan() -> None:
     assert_frame_equal(df, df, primary_key="id")
 
 
+@pytest.mark.parametrize(
+    ("left_value", "right_value"),
+    [
+        (1.0, 1.0 + 1e-7),  # within 1e-05 rel_tol, outside 1e-09
+        (0.0, 1e-17),  # within 1e-08 abs_tol, outside 0.0
+    ],
+)
+def test_compare_frames_flags_what_assert_frame_equal_tolerates(
+    left_value: float, right_value: float
+) -> None:
+    left = pl.DataFrame({"id": [1], "value": [left_value]})
+    right = pl.DataFrame({"id": [1], "value": [right_value]})
+    assert not compare_frames(left, right, primary_key="id").equal()
+    assert_frame_equal(left, right, primary_key="id")  # must not raise
+
+
 def test_error_exposes_comparison() -> None:
     # Arrange
     left = pl.DataFrame({"id": [1, 2], "value": [10.0, 20.0]})

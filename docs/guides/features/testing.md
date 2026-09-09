@@ -23,6 +23,7 @@ Unlike `polars.testing.assert_frame_equal`, `diffly`'s version:
 - Prints a comprehensive summary of all differences
 - Supports tolerance-based comparisons for floating point and temporal values
 - Allows mixing eager and lazy frames in the same comparison
+- Uses the same default tolerances as `polars.testing.assert_frame_equal`, which are looser than those of `compare_frames` (see {doc}`tolerances`)
 
 ## Asserting equality of `dataframely` collections
 
