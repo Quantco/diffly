@@ -3,7 +3,6 @@
 
 import datetime as dt
 import warnings
-from pathlib import Path
 from typing import Annotated
 
 import polars as pl
@@ -24,8 +23,8 @@ app = typer.Typer()
 
 @app.command()
 def main(
-    left: Annotated[Path, typer.Argument(help="Path to the left parquet file.")],
-    right: Annotated[Path, typer.Argument(help="Path to the right parquet file.")],
+    left: Annotated[str, typer.Argument(help="Path or URL to the left parquet file.")],
+    right: Annotated[str, typer.Argument(help="Path or URL to the right parquet file.")],
     primary_key: Annotated[
         list[str],
         typer.Option(
