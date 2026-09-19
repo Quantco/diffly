@@ -1,10 +1,14 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
+from collections.abc import Generator
 from pathlib import Path
 
+import boto3
 import polars as pl
 import pytest
+from moto.server import ThreadedMotoServer
+from pytest import MonkeyPatch
 
 pytest.importorskip("typer", reason="requires typer")
 
@@ -14,6 +18,25 @@ from diffly import compare_frames
 from diffly.cli import app
 
 runner = CliRunner()
+
+
+@pytest.fixture()
+def moto_server(monkeypatch: MonkeyPatch) -> Generator[str, None, None]:
+    server = ThreadedMotoServer("127.0.0.1", port=0)
+    server.start()
+    host, port = server.get_host_and_port()
+    endpoint = f"http://{host}:{port}"
+
+    monkeypatch.setenv("AWS_ENDPOINT_URL", endpoint)
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "secret")
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "access")
+
+    client = boto3.client("s3")
+    client.create_bucket(Bucket="test")
+
+    yield endpoint
+
+    server.stop()
 
 
 @pytest.mark.parametrize("output_json", [False, True])
@@ -138,3 +161,28 @@ def test_cli_metric_from_both_defaults(
     )
     assert result.exit_code == 0
     assert metric_name in result.output
+
+
+def test_cli_load_remote_url(moto_server: str) -> None:
+    left = pl.DataFrame({"id": [1, 2], "x": [1.0, 2.0]})
+    right = pl.DataFrame({"id": [1, 2], "x": [1.0, 3.0]})
+    left.write_parquet("s3://test/left.parquet")
+    right.write_parquet("s3://test/right.parquet")
+
+    result = runner.invoke(
+        app,
+        [
+            "s3://test/left.parquet",
+            "s3://test/right.parquet",
+            "--primary-key",
+            "id",
+            "--json",
+        ],
+    )
+    comparison = compare_frames(
+        left,
+        right,
+        primary_key="id",
+    )
+    assert result.exit_code == 0
+    assert result.output == comparison.summary().to_json() + "\n"
