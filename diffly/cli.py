@@ -24,7 +24,9 @@ app = typer.Typer()
 @app.command()
 def main(
     left: Annotated[str, typer.Argument(help="Path or URL to the left parquet file.")],
-    right: Annotated[str, typer.Argument(help="Path or URL to the right parquet file.")],
+    right: Annotated[
+        str, typer.Argument(help="Path or URL to the right parquet file.")
+    ],
     primary_key: Annotated[
         list[str],
         typer.Option(
