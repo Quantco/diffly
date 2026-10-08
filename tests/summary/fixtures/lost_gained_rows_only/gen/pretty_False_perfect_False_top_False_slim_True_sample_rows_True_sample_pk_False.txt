@@ -14,8 +14,8 @@
    ┏━━━━━━━━━┓
    ┃ name    ┃
    ┡━━━━━━━━━┩
-   │ dolphin │
    │ parrot  │
+   │ dolphin │
    └─────────┘
 
  Rows right only
