@@ -550,18 +550,26 @@ class DataFrameComparison:
         return lazy_len(self.joined_unequal(*subset, lazy=True))
 
     @overload
-    def left_only(self, *, lazy: Literal[True]) -> pl.LazyFrame: ...
+    def left_only(
+        self, *, lazy: Literal[True], maintain_order: bool = False
+    ) -> pl.LazyFrame: ...
 
     @overload
-    def left_only(self, *, lazy: Literal[False] = False) -> pl.DataFrame: ...
+    def left_only(
+        self, *, lazy: Literal[False] = False, maintain_order: bool = False
+    ) -> pl.DataFrame: ...
 
-    def left_only(self, *, lazy: bool = False) -> pl.DataFrame | pl.LazyFrame:
+    def left_only(
+        self, *, lazy: bool = False, maintain_order: bool = False
+    ) -> pl.DataFrame | pl.LazyFrame:
         """The rows in the left data frame which cannot be joined with a row in the
         right data frame.
 
         Args:
             lazy: If ``True``, return a lazy frame. Otherwise, return an eager frame
                 (default).
+            maintain_order: Whether to maintain the order of the left data frame in the
+                result.
 
         Returns:
             A data frame or lazy frame containing the rows that are only in the left data
@@ -585,7 +593,11 @@ class DataFrameComparison:
         """
         primary_key = self._check_primary_key()
         result = self.left.join(
-            self.right, on=primary_key, how="anti", nulls_equal=True
+            self.right,
+            on=primary_key,
+            how="anti",
+            nulls_equal=True,
+            maintain_order="left" if maintain_order else None,
         )
         return result if lazy else result.collect()
 
@@ -606,18 +618,26 @@ class DataFrameComparison:
         return lazy_len(self.left_only(lazy=True))
 
     @overload
-    def right_only(self, *, lazy: Literal[True]) -> pl.LazyFrame: ...
+    def right_only(
+        self, *, lazy: Literal[True], maintain_order: bool = False
+    ) -> pl.LazyFrame: ...
 
     @overload
-    def right_only(self, *, lazy: Literal[False] = False) -> pl.DataFrame: ...
+    def right_only(
+        self, *, lazy: Literal[False] = False, maintain_order: bool = False
+    ) -> pl.DataFrame: ...
 
-    def right_only(self, *, lazy: bool = False) -> pl.DataFrame | pl.LazyFrame:
+    def right_only(
+        self, *, lazy: bool = False, maintain_order: bool = False
+    ) -> pl.DataFrame | pl.LazyFrame:
         """The rows in the right data frame which cannot be joined with a row in the
         left data frame.
 
         Args:
             lazy: If ``True``, return a lazy frame. Otherwise, return an eager frame
                 (default).
+            maintain_order: Whether to maintain the order of the right data frame in the
+                result.
 
         Returns:
             A data frame or lazy frame containing the rows that are only in the right data
@@ -641,7 +661,11 @@ class DataFrameComparison:
         """
         primary_key = self._check_primary_key()
         result = self.right.join(
-            self.left, on=primary_key, how="anti", nulls_equal=True
+            self.left,
+            on=primary_key,
+            how="anti",
+            nulls_equal=True,
+            maintain_order="left" if maintain_order else None,
         )
         return result if lazy else result.collect()
 

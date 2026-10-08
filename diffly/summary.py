@@ -1167,13 +1167,23 @@ def _compute_sample_rows(
     assert isinstance(pk, list)
 
     if comp.num_rows_left_only() > 0:
-        df = comp.left_only(lazy=True).select(pk).head(sample_k_rows_only).collect()
+        df = (
+            comp.left_only(lazy=True, maintain_order=True)
+            .select(pk)
+            .head(sample_k_rows_only)
+            .collect()
+        )
         sample_left = [tuple(row) for row in df.iter_rows()]
     else:
         sample_left = []
 
     if comp.num_rows_right_only() > 0:
-        df = comp.right_only(lazy=True).select(pk).head(sample_k_rows_only).collect()
+        df = (
+            comp.right_only(lazy=True, maintain_order=True)
+            .select(pk)
+            .head(sample_k_rows_only)
+            .collect()
+        )
         sample_right = [tuple(row) for row in df.iter_rows()]
     else:
         sample_right = []
