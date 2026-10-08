@@ -1,16 +1,13 @@
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+requires = ["hatch-vcs", "hatchling"]
 
 [project]
-name = "diffly"
-description = "Utility package for comparing polars dataframes."
 authors = [
   { name = "Ege Karaismailoğlu", email = "ege.karaismailoglu@quantco.com" },
   { name = "Marius Merkle", email = "marius.merkle@quantco.com" },
   { name = "Oliver Borchert", email = "oliver.borchert@quantco.com" },
 ]
-dynamic = ["version"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
@@ -18,12 +15,15 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
 ]
-requires-python = ">=3.11"
-readme = "README.md"
 dependencies = [
-  "polars>=1.32,<2", # is_close() only exists since 1.32
+  "polars>=1.32,<3", # is_close() only exists since 1.32
   "rich",
 ]
+description = "Utility package for comparing polars dataframes."
+dynamic = ["version"]
+name = "diffly"
+readme = "README.md"
+requires-python = ">=3.11"
 
 [project.urls]
 repository = "https://github.com/Quantco/diffly"
@@ -94,10 +94,10 @@ default.extend-ignore-re = [
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib -m 'not generate'"
-markers = ["generate: mark a test function as generating fixture output."]
-testpaths = ["tests"]
 filterwarnings = [
   "error",
   # polars' deprecation warning for horizontal concatenation cannot be solved, we are already using it correctly
   "ignore:the default behavior of `how='horizontal'` for `concat` is deprecated:DeprecationWarning",
 ]
+markers = ["generate: mark a test function as generating fixture output."]
+testpaths = ["tests"]
