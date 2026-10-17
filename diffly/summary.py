@@ -117,9 +117,9 @@ class Summary:
                   "right_name": "right",
                   "primary_key": ["id"],
                   "schemas": {
-                    "left_only_names": [],
+                    "left_only": [],
                     "in_common": [["id", "Int64", "Int64"], ["value", "Float64", "Float64"]],
-                    "right_only_names": []
+                    "right_only": []
                   },
                   "rows": {
                     "n_left": 3,
@@ -240,23 +240,25 @@ class Summary:
 
         table = Table()
 
-        left_only_names = set(schemas.left_only_names)
-        right_only_names = set(schemas.right_only_names)
-        max_column_width = max(
-            len(column) for column in left_only_names | right_only_names | {""}
-        )
+        left_only_dtypes = schemas.left_only
+        right_only_dtypes = schemas.right_only
+        missing_widths = [
+            len(f"{col} [{dtype}]")
+            for col, dtype in left_only_dtypes + right_only_dtypes
+        ]
+        max_column_width = max(missing_widths, default=0)
 
-        if len(missing := left_only_names | right_only_names) > 0:
+        if len(missing_widths) > 0:
             # NOTE: At least 10 as "in common" already has 9 chars
-            min_width = max(10, *[len(col) for col in missing])
+            min_width = max(10, *missing_widths)
         else:
             min_width = 0
 
         table_data: dict[str, list[str]] = {}
 
         # Left only
-        if len(left_only_names) > 0:
-            left_only_header = f"{capitalize_first(self._data._truncated_left_name)} only \n{_print_num_columns(len(left_only_names))}"
+        if len(left_only_dtypes) > 0:
+            left_only_header = f"{capitalize_first(self._data._truncated_left_name)} only \n{_print_num_columns(len(left_only_dtypes))}"
             table.add_column(
                 left_only_header,
                 header_style="red",
@@ -266,7 +268,7 @@ class Summary:
                 overflow=OVERFLOW,
             )
             table_data[left_only_header] = [
-                _format_colname(col) for col in sorted(left_only_names)
+                f"{_format_colname(col)} [{dtype}]" for col, dtype in left_only_dtypes
             ]
 
         # In common
@@ -307,8 +309,8 @@ class Summary:
                 )
 
         # Right only
-        if len(right_only_names) > 0:
-            right_only_header = f"{capitalize_first(self._data._truncated_right_name)} only\n{_print_num_columns(len(right_only_names))}"
+        if len(right_only_dtypes) > 0:
+            right_only_header = f"{capitalize_first(self._data._truncated_right_name)} only\n{_print_num_columns(len(right_only_dtypes))}"
             table.add_column(
                 right_only_header,
                 header_style="green",
@@ -318,7 +320,7 @@ class Summary:
                 overflow=OVERFLOW,
             )
             table_data[right_only_header] = [
-                _format_colname(col) for col in sorted(right_only_names)
+                f"{_format_colname(col)} [{dtype}]" for col, dtype in right_only_dtypes
             ]
 
         max_len = max(len(column_list) for column_list in table_data.values())
@@ -723,9 +725,9 @@ class Summary:
 
 @dataclass
 class SummaryDataSchemas:
-    left_only_names: list[str]
+    left_only: list[tuple[str, str]]
     in_common: list[tuple[str, str, str]]
-    right_only_names: list[str]
+    right_only: list[tuple[str, str]]
     _equal: bool
     _mismatching_dtypes: list[tuple[str, str, str]]
 
@@ -949,12 +951,18 @@ def _compute_schemas(
     in_common = sorted(comp.schemas.in_common().items())
     mismatching = sorted(comp.schemas.in_common().mismatching_dtypes().items())
     return SummaryDataSchemas(
-        left_only_names=sorted(comp.schemas.left_only().column_names()),
+        left_only=[
+            (name, str(dtype))
+            for name, dtype in sorted(comp.schemas.left_only().items())
+        ],
         in_common=[
             (name, str(left_dtype), str(right_dtype))
             for name, (left_dtype, right_dtype) in in_common
         ],
-        right_only_names=sorted(comp.schemas.right_only().column_names()),
+        right_only=[
+            (name, str(dtype))
+            for name, dtype in sorted(comp.schemas.right_only().items())
+        ],
         _equal=comp.schemas.equal(),
         _mismatching_dtypes=[
             (name, str(left_dtype), str(right_dtype))

@@ -4,17 +4,19 @@
    ┃         Left only         ┃         In common         ┃        Right only         ┃
    ┃         4 columns         ┃         6 columns         ┃         4 columns         ┃
    ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-   │           buzz            │            ...            │           bing            │
+   │       buzz [Int64]        │            ...            │       bing [Int64]        │
    ├───────────────────────────┼───────────────────────────┼───────────────────────────┤
-   │           fizz            │                           │           bong            │
+   │       fizz [Int64]        │                           │       bong [Int64]        │
    ├───────────────────────────┼───────────────────────────┼───────────────────────────┤
-   │           waldo           │                           │ pharmacovigilance_adverse │
+   │       waldo [Int64]       │                           │ pharmacovigilance_adverse │
    │                           │                           │ _event_reporting_complian │
    │                           │                           │  ce_documentation_status  │
+   │                           │                           │          [Int64]          │
    ├───────────────────────────┼───────────────────────────┼───────────────────────────┤
-   │ z_multidimensional_data_v │                           │           zork            │
+   │ z_multidimensional_data_v │                           │       zork [Int64]        │
    │ isualization_technique_op │                           │                           │
    │   timization_parameter    │                           │                           │
+   │          [Int64]          │                           │                           │
    └───────────────────────────┴───────────────────────────┴───────────────────────────┘
 
  Rows
