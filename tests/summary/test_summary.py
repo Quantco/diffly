@@ -213,13 +213,13 @@ def test_summary_data_parametrized(
     expected_schemas: dict | None = None
     if not slim:
         expected_schemas = {
-            "left_only_names": [],
+            "left_only": [],
             "in_common": [
                 ["id", "Int64", "Int64"],
                 ["status", "String", "String"],
                 ["value", "Float64", "Float64"],
             ],
-            "right_only_names": [],
+            "right_only": [],
         }
 
     # Columns: status has 100% match rate, value has 2/3

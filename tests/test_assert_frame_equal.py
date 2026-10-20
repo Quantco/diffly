@@ -1,6 +1,7 @@
 # Copyright (c) QuantCo 2025-2026
 # SPDX-License-Identifier: BSD-3-Clause
 
+import re
 import textwrap
 
 import polars as pl
@@ -39,9 +40,7 @@ def test_assertion_error_different(
         show_perfect_column_matches=show_perfect_column_matches,
         top_k_column_changes=3 if show_top_column_changes else 0,
     )
-    expected = (
-        textwrap.indent(str(summary), " " * 2).replace("(", "\\(").replace(")", "\\)")
-    )
+    expected = re.escape(textwrap.indent(str(summary), " " * 2))
     with pytest.raises(AssertionError, match=expected):
         assert_frame_equal(
             left,
