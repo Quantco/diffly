@@ -166,7 +166,7 @@ def main(
             help=(
                 "The number of decimal places to show for percentages in the summary, "
                 "e.g. column match rates."
-            )
+            ),
         ),
     ] = 2,
 ) -> None:
