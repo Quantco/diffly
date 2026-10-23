@@ -103,6 +103,27 @@ def test_cli_hidden_columns_alias_warns(tmp_path: Path) -> None:
     assert result.exit_code == 0
 
 
+def test_cli_percentage_decimals(tmp_path: Path) -> None:
+    left = pl.DataFrame({"id": [1, 2, 3], "x": [1, 2, 3]})
+    right = pl.DataFrame({"id": [1, 2, 3], "x": [1, 2, 4]})
+    left.write_parquet(tmp_path / "left.parquet")
+    right.write_parquet(tmp_path / "right.parquet")
+
+    result = runner.invoke(
+        app,
+        [
+            str(tmp_path / "left.parquet"),
+            str(tmp_path / "right.parquet"),
+            "--primary-key",
+            "id",
+            "--percentage-decimals",
+            "3",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "66.667%" in result.output
+
+
 @pytest.mark.parametrize(
     "flag, name, expected",
     [

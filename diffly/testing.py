@@ -104,6 +104,7 @@ def assert_collection_equal(
     hidden_columns: list[str] | None = None,
     data_metrics: Mapping[str, DataMetricFn | DataMetric] | None = None,
     change_metrics: Mapping[str, ChangeMetricFn | ChangeMetric] | None = None,
+    percentage_decimals: int = 2,
 ) -> None:
     """Assert that two :mod:`dataframely` collections are equal.
 
@@ -159,6 +160,8 @@ def assert_collection_equal(
             target other column types, construct the metric explicitly with a column
             selector. See :mod:`diffly.metrics` for presets. When ``None`` (default), no
             change metrics are computed.
+        percentage_decimals: The number of decimal places to show for percentages in
+            the summary, e.g. column match rates.
 
     Raises:
         CollectionComparisonAssertionError: If the collections are not equal.
@@ -217,6 +220,7 @@ def assert_collection_equal(
                             hidden_columns=hidden_columns,
                             data_metrics=data_metrics,
                             change_metrics=change_metrics,
+                            percentage_decimals=percentage_decimals,
                         )
                     )
                 }"""
@@ -251,6 +255,7 @@ def assert_frame_equal(
     hidden_columns: list[str] | None = None,
     data_metrics: Mapping[str, DataMetricFn | DataMetric] | None = None,
     change_metrics: Mapping[str, ChangeMetricFn | ChangeMetric] | None = None,
+    percentage_decimals: int = 2,
 ) -> None:
     """Assert that two :mod:`polars` data frames are equal.
 
@@ -313,6 +318,8 @@ def assert_frame_equal(
             target other column types, construct the metric explicitly with a column
             selector. See :mod:`diffly.metrics` for presets. When ``None`` (default), no
             change metrics are computed.
+        percentage_decimals: The number of decimal places to show for percentages in
+            the summary, e.g. column match rates.
 
     Raises:
         FrameComparisonAssertionError: If the data frames are not equal.
@@ -360,6 +367,7 @@ def assert_frame_equal(
             hidden_columns=hidden_columns,
             data_metrics=data_metrics,
             change_metrics=change_metrics,
+            percentage_decimals=percentage_decimals,
         )
         text = textwrap.indent(str(summary), " " * 2)
         raise FrameComparisonAssertionError(
