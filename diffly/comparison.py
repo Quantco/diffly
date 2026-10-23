@@ -942,6 +942,7 @@ class DataFrameComparison:
         hidden_columns: list[str] | None = None,
         data_metrics: Mapping[str, DataMetricFn | DataMetric] | None = None,
         change_metrics: Mapping[str, ChangeMetricFn | ChangeMetric] | None = None,
+        percentage_decimals: int = 2,
     ) -> Summary:
         """Generate a summary of all aspects of the comparison.
 
@@ -995,6 +996,8 @@ class DataFrameComparison:
                 (default), no metrics are computed; presets are not applied
                 automatically. Prefer short labels — the summary has a fixed width and
                 many or long labels degrade rendering.
+            percentage_decimals: The number of decimal places to show for percentages
+                in the summary, e.g. column match rates.
 
         Returns:
             A summary which can be printed or written to a file.
@@ -1033,6 +1036,7 @@ class DataFrameComparison:
             hidden_columns=hidden_columns,
             data_metrics=resolved_data_metrics,
             change_metrics=resolved_change_metrics,
+            percentage_decimals=percentage_decimals,
         )
 
     # ----------------------------------- UTILITIES ----------------------------------- #

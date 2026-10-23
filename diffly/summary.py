@@ -64,8 +64,10 @@ class Summary:
         hidden_columns: list[str] | None,
         data_metrics: Mapping[str, DataMetric] | None,
         change_metrics: Mapping[str, ChangeMetric] | None,
+        percentage_decimals: int,
     ):
         self.slim = slim
+        self.percentage_decimals = percentage_decimals
         self._data = _compute_summary_data(
             comparison,
             show_perfect_column_matches=show_perfect_column_matches,
@@ -392,9 +394,13 @@ class Summary:
         if rows.n_left > 0:
             fraction_rows_right = rows.n_right / rows.n_left
             if fraction_rows_right > 1:
-                gain_loss = f"(+{(fraction_rows_right - 1):.2%})"
+                gain_loss = (
+                    f"(+{(fraction_rows_right - 1):.{self.percentage_decimals}%})"
+                )
             elif fraction_rows_right < 1:
-                gain_loss = f"(-{(1 - fraction_rows_right):.2%})"
+                gain_loss = (
+                    f"(-{(1 - fraction_rows_right):.{self.percentage_decimals}%})"
+                )
             else:
                 gain_loss = "(no change)"
 
@@ -424,6 +430,7 @@ class Summary:
         assert rows.n_joined_unequal is not None
         assert rows.n_right_only is not None
         n_joined = rows.n_joined_equal + rows.n_joined_unequal
+        decimals = self.percentage_decimals
 
         columns: list[RenderableType] = []
         num_dummy_cols = 5
@@ -512,7 +519,7 @@ class Summary:
                 grid.add_row(
                     f"{rows.n_left_only:,}",
                     f"{self._data._truncated_left_name} only",
-                    f"({_format_fraction_as_percentage(fraction_left_only)})",
+                    f"({_format_fraction_as_percentage(fraction_left_only, decimals)})",
                 )
                 grid.add_section()
             if rows.n_joined_equal > 0:
@@ -520,7 +527,7 @@ class Summary:
                 grid.add_row(
                     f"{rows.n_joined_equal:,}",
                     "equal",
-                    f"({_format_fraction_as_percentage(fraction_equal)})",
+                    f"({_format_fraction_as_percentage(fraction_equal, decimals)})",
                 )
                 grid.add_section()
             if rows.n_joined_unequal > 0:
@@ -528,7 +535,7 @@ class Summary:
                 grid.add_row(
                     f"{rows.n_joined_unequal:,}",
                     "unequal",
-                    f"({_format_fraction_as_percentage(fraction_unequal)})",
+                    f"({_format_fraction_as_percentage(fraction_unequal, decimals)})",
                 )
                 grid.add_section()
             if rows.n_right_only > 0:
@@ -536,7 +543,7 @@ class Summary:
                 grid.add_row(
                     f"{rows.n_right_only:,}",
                     f"{self._data._truncated_right_name} only",
-                    f"({_format_fraction_as_percentage(fraction_right_only)})",
+                    f"({_format_fraction_as_percentage(fraction_right_only, decimals)})",
                 )
             columns.append(grid)
 
@@ -594,10 +601,11 @@ class Summary:
             if has_top_changes_column:
                 matches.add_column("Top Changes", justify="right")
             max_col_len = max(len(c.name) for c in columns)
+            decimals = self.percentage_decimals
             for col in columns:
                 row_items: list[RenderableType] = [
                     Text(col.name, style="cyan"),
-                    f"{_format_fraction_as_percentage(col.match_rate)}",
+                    f"{_format_fraction_as_percentage(col.match_rate, decimals)}",
                 ]
                 for label in self._data._change_metric_labels:
                     value = (
@@ -1228,13 +1236,14 @@ def _format_colname(name: str) -> str:
     return f"[cyan]{name}[/cyan]"
 
 
-def _format_fraction_as_percentage(fraction: float) -> str:
-    """Format a fraction as a percentage with two decimal places.
+def _format_fraction_as_percentage(fraction: float, decimals: int) -> str:
+    """Format a fraction as a percentage with the given number of decimal places.
 
     Only shows 0%/100% if the fraction is exactly 0 or 1, respectively.
 
     Args:
         fraction: The fraction to format as a percentage. Must be in the range [0, 1].
+        decimals: The number of decimal places to show.
 
     Returns:
         The formatted percentage, including a percent sign.
@@ -1242,8 +1251,9 @@ def _format_fraction_as_percentage(fraction: float) -> str:
     assert 0 <= fraction <= 1, "Fraction must be between 0 and 1"
     percentage = fraction * 100
     if percentage not in [0, 100]:
-        percentage = min(max(percentage, 0.01), 99.99)
-    return f"{percentage:.2f}%"
+        smallest = 10**-decimals
+        percentage = min(max(percentage, smallest), 100 - smallest)
+    return f"{percentage:.{decimals}f}%"
 
 
 def _yellow(raw: Any) -> str:

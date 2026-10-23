@@ -159,6 +159,16 @@ def main(
             )
         ),
     ] = [],
+    percentage_decimals: Annotated[
+        int,
+        typer.Option(
+            min=0,
+            help=(
+                "The number of decimal places to show for percentages in the summary, "
+                "e.g. column match rates."
+            ),
+        ),
+    ] = 2,
 ) -> None:
     """Compare two `parquet` files and print the comparison result."""
     if hidden_columns:
@@ -202,6 +212,7 @@ def main(
         hidden_columns=hidden_column,
         data_metrics=data_metrics,
         change_metrics=change_metrics,
+        percentage_decimals=percentage_decimals,
     )
     if output_json:
         typer.echo(summary.to_json())
