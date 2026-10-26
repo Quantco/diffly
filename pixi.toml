@@ -1,20 +1,30 @@
 [workspace]
+name = "diffly"
 channels = ["conda-forge"]
 description = "Utility package for comparing polars dataframes."
 exclude-newer = "7d"
-name = "diffly"
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64"]
+preview = ["pixi-build"]
 
-[tasks]
-postinstall = "pip install --no-build-isolation --no-deps --disable-pip-version-check -e ."
+[package]
+name = "diffly"
+
+[package.build.backend]
+name = "pixi-build-python"
+version = "*"
+
+[package.host-dependencies]
+python = ">=3.11"
+hatchling = "*"
+uv = "*"
+
+[package.run-dependencies]
+python = ">=3.11"
+polars = ">=2,<3"
+rich = "*"
 
 [dependencies]
-hatch-vcs = "*"
-hatchling = "*"
-pip = "*"
-polars = ">=2,<3"
-python = ">=3.11"
-rich = "*"
+diffly = { path = "." }
 
 [feature.docs.dependencies]
 myst-nb = "*"
@@ -25,7 +35,7 @@ sphinx-copybutton = "*"
 sphinx-design = "*"
 
 [feature.docs.tasks]
-docs = { cmd = "rm -rf _build && find . -name _gen -type d -exec rm -rf \"{}\" + && sphinx-build -M html . _build --fail-on-warning", cwd = "docs", depends-on = "postinstall" }
+docs = { cmd = "rm -rf _build && find . -name _gen -type d -exec rm -rf \"{}\" + && sphinx-build -M html . _build --fail-on-warning", cwd = "docs" }
 readthedocs = { cmd = "rm -rf $READTHEDOCS_OUTPUT/html && cp -r docs/_build/html $READTHEDOCS_OUTPUT/html", depends-on = "docs" }
 
 [feature.dev.dependencies]
@@ -45,9 +55,10 @@ test = "python -m pytest"
 test-coverage = "python -m pytest --cov=diffly --cov-report=xml --cov-report=term-missing"
 
 [feature.build.dependencies]
+python = "*"
+hatchling = "*"
 python-build = "*"
-twine = "*"
-wheel = "*"
+twine = ">=6"
 
 [feature.build.tasks]
 build-wheel = "python -m build --no-isolation ."
@@ -87,12 +98,14 @@ python = "3.15.*"
 dataframely = ">=3,<4"
 typer = ">=0.21,<1"
 
+[feature.nightly.dependencies]
+pip = "*"
+
 [feature.nightly.tasks]
 install-polars-nightly = "pip install --pre --no-deps --upgrade --only-binary :all: polars polars-runtime-32"
 
 [environments]
-build = ["build", "py314"]
-default = ["dev", "lint", "optional", "py314", "test"]
+default = ["build", "dev", "lint", "optional", "py314", "test"]
 docs = ["docs", "py314"]
 nightly = ["nightly", "optional", "py314", "test"]
 no-optional-dependencies = ["py314", "test"]

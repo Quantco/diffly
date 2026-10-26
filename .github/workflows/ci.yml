@@ -25,8 +25,6 @@ jobs:
           fetch-depth: 0
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
-      - name: Install repository
-        run: pixi run -e default postinstall
       - name: Run linting
         run: pixi run lint
         env:
@@ -65,8 +63,6 @@ jobs:
         uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
         with:
           environments: ${{ matrix.environment }}
-      - name: Install repository
-        run: pixi run -e ${{ matrix.environment }} postinstall
       - name: Run pytest
         run: pixi run -e ${{ matrix.environment }} test-coverage --color=yes
       - name: Upload coverage
