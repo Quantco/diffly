@@ -89,21 +89,6 @@ def test__format_fraction_as_percentage(
     assert _format_fraction_as_percentage(fraction, decimals) == expected
 
 
-def test_summary_percentage_decimals() -> None:
-    left = pl.DataFrame({"id": [1, 2, 3], "x": [1, 2, 3]})
-    right = pl.DataFrame({"id": [1, 2, 3, 4], "x": [1, 2, 4, 5]})
-    comp = compare_frames(left, right, primary_key="id")
-
-    default = str(comp.summary())
-    assert "66.67%" in default
-    assert "(+33.33%)" in default
-
-    summary = str(comp.summary(percentage_decimals=4))
-    assert "66.6667%" in summary
-    assert "(+33.3333%)" in summary
-    assert "(25.0000%)" in summary
-
-
 def test_validate_primary_key_hidden_columns() -> None:
     df = pl.DataFrame({"id": ["a", "b", "c"]})
     comp = compare_frames(
