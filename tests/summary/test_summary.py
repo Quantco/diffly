@@ -41,18 +41,28 @@ def test_summary_dunder_methods(
 
 
 @pytest.mark.parametrize(
-    "fraction, expected",
+    "fraction, decimals, expected",
     [
-        (0.5, "50.00%"),
-        (0.123456, "12.35%"),
-        (0.000001, "0.01%"),
-        (0.999999, "99.99%"),
-        (0, "0.00%"),
-        (1, "100.00%"),
+        (0.5, 2, "50.00%"),
+        (0.123456, 2, "12.35%"),
+        (0.000001, 2, "0.01%"),
+        (0.999999, 2, "99.99%"),
+        (0, 2, "0.00%"),
+        (1, 2, "100.00%"),
+        (0.123456, 0, "12%"),
+        (0.000001, 0, "1%"),
+        (0.999999, 0, "99%"),
+        (0, 0, "0%"),
+        (1, 0, "100%"),
+        (0.123456, 4, "12.3456%"),
+        (0.0000001, 4, "0.0001%"),
+        (0.9999999, 4, "99.9999%"),
     ],
 )
-def test__format_fraction_as_percentage(fraction: float, expected: str) -> None:
-    assert _format_fraction_as_percentage(fraction) == expected
+def test__format_fraction_as_percentage(
+    fraction: float, decimals: int, expected: str
+) -> None:
+    assert _format_fraction_as_percentage(fraction, decimals) == expected
 
 
 def test_validate_primary_key_hidden_columns() -> None:
