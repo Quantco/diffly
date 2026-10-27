@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   lint:
-    name: Pre-commit Checks
+    name: Lint
     timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
@@ -21,16 +21,14 @@ jobs:
       - name: Check out branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # needed for 'pre-commit-mirrors-insert-license'
+          # needed for insert-license's dynamic copyright years
           fetch-depth: 0
       - name: Set up pixi
-        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
-        with:
-          environments: default lint py311
-      - name: Install repository
-        run: pixi run -e default postinstall
-      - name: pre-commit
-        run: pixi run pre-commit-run --color=always --show-diff-on-failure
+        uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - name: Run linting
+        run: pixi run lint
+        env:
+          CLICOLOR_FORCE: 1
       - name: Upload coverage
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
@@ -51,6 +49,7 @@ jobs:
           - py312
           - py313
           - py314
+          - py315
           - no-optional-dependencies
         os:
           - ubuntu-latest
@@ -58,12 +57,12 @@ jobs:
     steps:
       - name: Check out branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - name: Set up pixi
-        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
         with:
           environments: ${{ matrix.environment }}
-      - name: Install repository
-        run: pixi run -e ${{ matrix.environment }} postinstall
       - name: Run pytest
         run: pixi run -e ${{ matrix.environment }} test-coverage --color=yes
       - name: Upload coverage

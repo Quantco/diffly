@@ -13,10 +13,9 @@ cd diffly
 pixi install
 ```
 
-Next make sure to install the package locally and set up pre-commit hooks:
+Next make sure to set up pre-commit hooks:
 
 ```bash
-pixi run postinstall
 pixi run pre-commit-install
 ```
 
@@ -53,7 +52,6 @@ documentation and then open it in your web browser using the commands below:
 
 ```bash
 # Run build
-pixi run -e docs postinstall
 pixi run docs
 
 # Open documentation

@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/evilmartians/lefthook/refs/heads/master/schema.json
+output: [summary]
+templates:
+  run: run --as-is --quiet --no-progress
+no_auto_install: true
+pre-commit:
+  fail_on_changes: always
+  exclude:
+    - assets/**/*
+  jobs:
+    - name: pixi-install
+      run: pixi install
+    - name: generate-fixture
+      run: pixi {run} test-coverage -m generate
+    - group:
+        parallel: true
+        jobs:
+          - name: insert-license
+            glob: "*.{py,pyi}"
+            run: >-
+              pixi {run} insert-license --license-base64
+              Q29weXJpZ2h0IChjKSBRdWFudENvIDIwMjUtMjAyNQpTUERYLUxpY2Vuc2UtSWRlbnRpZmllcjogQlNELTMtQ2xhdXNl
+              --dynamic-years --comment-style "#" {staged_files}
+          - name: ruff-check
+            glob: "*.{py,pyi}"
+            run: pixi {run} ruff check --fix --exit-non-zero-on-fix --force-exclude {staged_files}
+          - name: ruff-format
+            glob: "*.{py,pyi}"
+            run: pixi {run} ruff format --force-exclude {staged_files}
+          - name: docformatter
+            glob: "*.{py,pyi}"
+            run: pixi {run} docformatter -i {staged_files}
+          - name: mypy
+            glob: "*.py"
+            run: pixi {run} mypy {staged_files}
+          - name: prettier
+            glob: "*.{md,yml,yaml}"
+            run: pixi {run} prettier --write --no-error-on-unmatched-pattern --list-different --ignore-unknown {staged_files}
+          - name: tombi
+            glob: "*.toml"
+            run: pixi {run} tombi format --offline {staged_files}
+          - name: trailing-whitespace-fixer
+            glob: "*"
+            exclude:
+              - "**/gen/*.txt"
+            file_types: text
+            run: pixi {run} trailing-whitespace-fixer {staged_files}
+          - name: end-of-file-fixer
+            glob: "*"
+            exclude:
+              - tests/summary/fixtures/**/*.txt
+            file_types: text
+            run: pixi {run} end-of-file-fixer {staged_files}
+          - name: check-merge-conflict
+            glob: "*"
+            exclude:
+              - "*.rst"
+            file_types: text
+            run: pixi {run} check-merge-conflict --assume-in-merge {staged_files}
+          - name: typos
+            glob: "*"
+            exclude:
+              - .copier-answers.yml
+            file_types: text
+            run: pixi {run} typos --force-exclude {staged_files}
+          - name: zizmor
+            glob: "*.{yml,yaml}"
+            run: pixi {run} zizmor --no-progress --min-severity high --fix --offline .
