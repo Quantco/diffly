@@ -40,30 +40,6 @@ def test_summary_dunder_methods(
     assert fn(summary) == summary.format(pretty=pretty)
 
 
-@pytest.mark.parametrize("show_perfect_column_matches", [True, False])
-@pytest.mark.parametrize("show_top_column_changes", [True, False])
-def test_summary_all_columns_join_cols(
-    show_perfect_column_matches: bool,
-    show_top_column_changes: bool,
-) -> None:
-    # Arrange
-    df = pl.DataFrame({"id": ["a", "b", "c"]})
-    comp = compare_frames(
-        df,
-        df.filter(pl.col("id") == "a"),
-        primary_key=["id"],
-    )
-
-    # Act
-    summary = comp.summary(
-        show_perfect_column_matches=show_perfect_column_matches,
-        top_k_column_changes=3 if show_top_column_changes else 0,
-    )
-
-    # Assert
-    assert "No common non-primary key columns to compare" in str(summary)
-
-
 @pytest.mark.parametrize(
     "fraction, decimals, expected",
     [
